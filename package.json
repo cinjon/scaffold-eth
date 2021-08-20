@@ -63,5 +63,7 @@
       "**/hardhat/**"
     ]
   },
-  "dependencies": {}
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.0"
+  }
 }

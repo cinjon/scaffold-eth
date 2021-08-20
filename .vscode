@@ -1,0 +1,4 @@
+{
+    "solidity.packageDefaultDependenciesContractsDirectory": "",
+    "solidity.packageDefaultDependenciesDirectory": "scaffold-eth/node_modules"
+}

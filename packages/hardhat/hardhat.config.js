@@ -231,6 +231,33 @@ module.exports = {
     deployer: {
       default: 0, // here this will by default take the first account as deployer
     },
+    allPool: {
+      default: 1,
+    },
+    admin: {
+      default: 2,
+    },
+    creator0: {
+      default: 3
+    },
+    creator1: {
+      default: 4,
+    },
+    creator2: {
+      default: 5
+    },
+    creator3: {
+      default: 6,
+    },
+    creator4: {
+      default: 7,
+    },
+    creator5: {
+      default: 8,
+    },
+    creator6: {
+      default: 9,
+    },
   },
 };
 

@@ -1,16 +1,67 @@
 // deploy/00_deploy_your_contract.js
 
-//const { ethers } = require("hardhat");
+const { ethers } = require("hardhat");
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
-  await deploy("YourContract", {
-    // Learn more about args here: https://www.npmjs.com/package/hardhat-deploy#deploymentsdeploy
+  const { admin, allPool, creator0, creator1, creator2, creator3, creator4, deployer } = await getNamedAccounts();
+
+  // const UnitV1Factory = await ethers.getContractFactory('UnitV1');
+  console.log('hiiii');
+  
+  console.log(creator1);
+
+  // If we JUST use this, it deploys, etc, successfully. So there's something about below that doesn't work.
+  const poolCoin = await deploy("PoolCoin", {
     from: deployer,
-    //args: [ "Hello", ethers.utils.parseEther("1.5") ],
+    args: [],
+    log: true
+  });
+
+  // This also deploys successfully.
+  const poolCoin2 = await deploy("PoolCoin2", {
+    from: deployer,
+    args: ["Pool2"],
+    log: true
+  });
+
+  const u0 = await deploy("UnitV1", {
+    from: deployer,
+    args: ["Unit0", "U0", "hash0", "url0", "creator0", creator0, admin, allPool, [], []],
     log: true,
   });
+
+
+  const u1 = await deploy("UnitV1", {
+    from: deployer,
+    args: ["Unit1", "U1", "hash1", "url1", "creator1", creator1, admin, allPool, [], []],
+    log: true,
+  });
+
+  // const u2 = await deploy("UnitV1", {
+  //   from: deployer,
+  //   args: ["Unit2", "U2", "hash2", "url2", "creator2", creator2, admin, allPool, [], []],
+  //   log: true,
+  // });
+
+  // const u2 = await deploy("UnitV1", {
+  //   from: deployer,
+  //   args: ["Unit0", "U0", "hash0", "url0", "creator0", creator0, admin, allPool, [], []],
+  //   log: true,
+  // });
+
+  // const u0 = await deploy("UnitV1", {
+  //   from: deployer,
+  //   args: ["Unit0", "U0", "hash0", "url0", "creator0", creator0, admin, allPool, [], []],
+  //   log: true,
+  // });
+
+  // const u0 = await deploy("UnitV1", {
+  //   from: deployer,
+  //   args: ["Unit0", "U0", "hash0", "url0", "creator0", creator0, admin, allPool, [], []],
+  //   log: true,
+  // });
+
 
   /*
     // Getting a previously deployed contract
@@ -44,4 +95,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   });
   */
 };
-module.exports.tags = ["YourContract"];
+module.exports.tags = ["UnitContract"];

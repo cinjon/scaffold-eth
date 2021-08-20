@@ -425,7 +425,7 @@ function App(props) {
               }}
               to="/"
             >
-              YourContract
+              UnitContract
             </Link>
           </Menu.Item>
           <Menu.Item key="/hints">
@@ -479,7 +479,7 @@ function App(props) {
             */}
 
             <Contract
-              name="YourContract"
+              name="UnitContract"
               signer={userSigner}
               provider={localProvider}
               address={address}
