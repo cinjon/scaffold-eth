@@ -449,16 +449,6 @@ function App(props) {
               }}
               to="/"
             >
-              PoolCoin
-            </Link>
-          </Menu.Item>
-          <Menu.Item key="/hints">
-            <Link
-              onClick={() => {
-                setRoute("/hints");
-              }}
-              to="/hints"
-            >
               Hints
             </Link>
           </Menu.Item>
@@ -511,13 +501,11 @@ function App(props) {
                 this <Contract/> component will automatically parse your ABI
                 and give you a form to interact with it locally
             */}
-
-            <Contract
-              name="PoolCoin"
-              signer={userSigner}
-              provider={localProvider}
+            <Hints
               address={address}
-              blockExplorer={blockExplorer}
+              yourLocalBalance={yourLocalBalance}
+              mainnetProvider={mainnetProvider}
+              price={price}
             />
           </Route>
           <Route path="/peoplecontracts">
@@ -541,14 +529,6 @@ function App(props) {
               blockExplorer={blockExplorer}
             />
           </Route>          
-          <Route path="/hints">
-            <Hints
-              address={address}
-              yourLocalBalance={yourLocalBalance}
-              mainnetProvider={mainnetProvider}
-              price={price}
-            />
-          </Route>
           <Route path="/exampleui">
             <ExampleUI
               address={address}

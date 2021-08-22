@@ -35,7 +35,6 @@ export default function Balance(props) {
   // const [listening, setListening] = useState(false);
 
   const balance = useBalance(props.provider, props.address);
-  console.log('in balance: ' + balance + ', ' + props.address);
 
   let floatBalance = parseFloat("0.00");
 
@@ -49,9 +48,7 @@ export default function Balance(props) {
   }
 
   if (usingBalance) {
-    console.log('in balance2: ' + usingBalance)
     const etherBalance = utils.formatEther(usingBalance);
-    console.log('in balance3: ' + etherBalance)
     parseFloat(etherBalance).toFixed(2);
     floatBalance = parseFloat(etherBalance);
   }

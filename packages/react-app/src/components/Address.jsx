@@ -62,6 +62,7 @@ export default function Address(props) {
   if (props.name) {
     displayAddress = props.name + '-' + displayAddress;
   }
+  
   const etherscanLink = blockExplorerLink(address, props.blockExplorer);
   if (props.minimized) {
     return (
