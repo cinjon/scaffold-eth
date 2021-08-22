@@ -21,7 +21,7 @@ import {
   useUserSigner,
 } from "./hooks";
 // import Hints from "./Hints";
-import { ExampleUI, Hints, Subgraph } from "./views";
+import { ExampleUI, Hints, Subgraph, InorganicContracts, PeopleContracts } from "./views";
 import Portis from "@portis/web3";
 import Fortmatic from "fortmatic";
 import Authereum from "authereum";
@@ -181,9 +181,37 @@ function App(props) {
   const gasPrice = useGasPrice(targetNetwork, "fast");
   // Use your injected provider from 🦊 Metamask or if you don't have it then instantly generate a 🔥 burner wallet.
   const userSigner = useUserSigner(injectedProvider, localProvider);
+  
+  // Ok, cool, so these listAccounts are in order, first namedAccounts and then unnamedAccounts. The ordering of the 
+  // namedAccounts follows hte ordering in hardhat.config.js:
+  // deployer, allPool, admin, creator0, ..., creatorN. For each namedAccount, there is an unnamedAccount.
+  const [peopleAddresses, setPeopleAddresses] = useState();
+  // const [allPool, setAllPool] = useState();
+  // const [admin, setAdmin] = useState();
+  // const [creators, setCreators] = useState();
+  useEffect(() => {
+    async function getPeopleAddresses() {
+      if (localProvider) {
+        localProvider.listAccounts().then(function(accounts) {
+          const deployer = accounts[0];
+          const allPool = accounts[1];
+          const admin = accounts[2];
+          const creators = accounts.slice(3, parseInt(accounts.length / 2));
+          var newPeopleAddresses = [['deployer', deployer], ['allPool', allPool], ['admin', admin]]
+          for (var i=0; i<creators.length; i++) {
+            var key = 'creator' + i;
+            newPeopleAddresses.push([key, creators[i]]);
+          } 
+          setPeopleAddresses(newPeopleAddresses);
+        })  
+      }
+    }
+    getPeopleAddresses();
+  }, [localProvider]);
 
   useEffect(() => {
     async function getAddress() {
+      console.log('in getaddress: ' + address)
       if (userSigner) {
         const newAddress = await userSigner.getAddress();
         setAddress(newAddress);
@@ -231,12 +259,6 @@ function App(props) {
   const myMainnetDAIBalance = useContractReader(mainnetContracts, "DAI", "balanceOf", [
     "0x34aA3F359A9D614239015126635CE7732c18fDF3",
   ]);
-
-  // keep track of a variable from the contract in the local React state:
-  const purpose = useContractReader(readContracts, "YourContract", "purpose");
-
-  // 📟 Listen for broadcast events
-  const setPurposeEvents = useEventListener(readContracts, "YourContract", "SetPurpose", localProvider, 1);
 
   /*
   const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
@@ -411,6 +433,8 @@ function App(props) {
     );
   }
 
+  // const yourLocalBalance = useBalance(localProvider, address);
+
   return (
     <div className="App">
       {/* ✏️ Edit the header and change the title to your project name */}
@@ -425,7 +449,7 @@ function App(props) {
               }}
               to="/"
             >
-              UnitContract
+              PoolCoin
             </Link>
           </Menu.Item>
           <Menu.Item key="/hints">
@@ -438,6 +462,26 @@ function App(props) {
               Hints
             </Link>
           </Menu.Item>
+          <Menu.Item key="/peoplecontracts">
+            <Link
+              onClick={() => {
+                setRoute("/peoplecontracts");
+              }}
+              to="/peoplecontracts"
+            >
+              People Contracts
+            </Link>
+          </Menu.Item>               
+          <Menu.Item key="/inorganiccontracts">
+            <Link
+              onClick={() => {
+                setRoute("/inorganiccontracts");
+              }}
+              to="/inorganiccontracts"
+            >
+              Inorganic Contracts
+            </Link>
+          </Menu.Item>          
           <Menu.Item key="/exampleui">
             <Link
               onClick={() => {
@@ -446,16 +490,6 @@ function App(props) {
               to="/exampleui"
             >
               ExampleUI
-            </Link>
-          </Menu.Item>
-          <Menu.Item key="/mainnetdai">
-            <Link
-              onClick={() => {
-                setRoute("/mainnetdai");
-              }}
-              to="/mainnetdai"
-            >
-              Mainnet DAI
             </Link>
           </Menu.Item>
           <Menu.Item key="/subgraph">
@@ -479,13 +513,34 @@ function App(props) {
             */}
 
             <Contract
-              name="UnitContract"
+              name="PoolCoin"
               signer={userSigner}
               provider={localProvider}
               address={address}
               blockExplorer={blockExplorer}
             />
           </Route>
+          <Route path="/peoplecontracts">
+            <PeopleContracts
+              address={address}
+              userSigner={userSigner}
+              mainnetProvider={mainnetProvider}
+              localProvider={localProvider}
+              readContracts={readContracts}
+              blockExplorer={blockExplorer}
+              peopleAddresses={peopleAddresses}
+            />
+          </Route>            
+          <Route path="/inorganiccontracts">
+            <InorganicContracts
+              address={address}
+              userSigner={userSigner}
+              mainnetProvider={mainnetProvider}
+              localProvider={localProvider}
+              readContracts={readContracts}
+              blockExplorer={blockExplorer}
+            />
+          </Route>          
           <Route path="/hints">
             <Hints
               address={address}
@@ -505,30 +560,8 @@ function App(props) {
               tx={tx}
               writeContracts={writeContracts}
               readContracts={readContracts}
-              purpose={purpose}
-              setPurposeEvents={setPurposeEvents}
             />
-          </Route>
-          <Route path="/mainnetdai">
-            <Contract
-              name="DAI"
-              customContract={mainnetContracts && mainnetContracts.contracts && mainnetContracts.contracts.DAI}
-              signer={userSigner}
-              provider={mainnetProvider}
-              address={address}
-              blockExplorer="https://etherscan.io/"
-            />
-            {/*
-            <Contract
-              name="UNI"
-              customContract={mainnetContracts && mainnetContracts.contracts && mainnetContracts.contracts.UNI}
-              signer={userSigner}
-              provider={mainnetProvider}
-              address={address}
-              blockExplorer="https://etherscan.io/"
-            />
-            */}
-          </Route>
+          </Route>            
           <Route path="/subgraph">
             <Subgraph
               subgraphUri={props.subgraphUri}

@@ -2,6 +2,7 @@ import { useTokenBalance } from "eth-hooks";
 import React, { useState } from "react";
 
 import { utils } from "ethers";
+import { ConsoleSqlOutlined } from "@ant-design/icons";
 
 export default function TokenBalance(props) {
   const [dollarMode, setDollarMode] = useState(true);
@@ -18,7 +19,7 @@ export default function TokenBalance(props) {
   }
 
   if (usingBalance) {
-    const etherBalance = utils.formatEther(usingBalance);
+    const etherBalance = usingBalance; // utils.formatEther(usingBalance);
     parseFloat(etherBalance).toFixed(2);
     floatBalance = parseFloat(etherBalance);
   }

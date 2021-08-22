@@ -1,39 +1,28 @@
 // deploy/00_deploy_your_contract.js
 
-const { ethers } = require("hardhat");
+const { ethers, getUnnamedAccounts } = require("hardhat");
 
-module.exports = async ({ getNamedAccounts, deployments }) => {
+module.exports = async ({ getNamedAccounts, getUnnamedAccounts, deployments }) => {
   const { deploy } = deployments;
-  const { admin, allPool, creator0, creator1, creator2, creator3, creator4, deployer } = await getNamedAccounts();
+  const { admin, allPool, creator0, creator1, creator2, creator3, creator4, creator5, creator6, deployer } = await getNamedAccounts();
 
-  // const UnitV1Factory = await ethers.getContractFactory('UnitV1');
-  console.log('hiiii');
-  
-  console.log(creator1);
-
-  // If we JUST use this, it deploys, etc, successfully. So there's something about below that doesn't work.
   const poolCoin = await deploy("PoolCoin", {
     from: deployer,
     args: [],
     log: true
   });
 
-  // This also deploys successfully.
-  const poolCoin2 = await deploy("PoolCoin2", {
+  const u0 = await deploy("Unit0", {
     from: deployer,
-    args: ["Pool2"],
-    log: true
-  });
-
-  const u0 = await deploy("UnitV1", {
-    from: deployer,
+    contract: "UnitCoinV1",
     args: ["Unit0", "U0", "hash0", "url0", "creator0", creator0, admin, allPool, [], []],
     log: true,
   });
 
 
-  const u1 = await deploy("UnitV1", {
+  const u1 = await deploy("Unit1", {
     from: deployer,
+    contract: "UnitCoinV1",
     args: ["Unit1", "U1", "hash1", "url1", "creator1", creator1, admin, allPool, [], []],
     log: true,
   });
@@ -95,4 +84,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   });
   */
 };
-module.exports.tags = ["UnitContract"];
+module.exports.tags = ["UnitV1", "PoolCoin", "PoolCoin2"];

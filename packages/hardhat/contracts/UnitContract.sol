@@ -9,39 +9,10 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 contract PoolCoin is ERC20 {
     constructor() ERC20("Pool", "PCO") public {
-        _mint(msg.sender, 10000);
+        _mint(msg.sender, 1000);
     }
 }
 
-contract PoolCoin2 is ERC20 {
-    constructor(string memory name) ERC20(name, "PCO") public {
-        _mint(msg.sender, 10000);
-    }
-}
-
-contract UnitCoin is ERC20Burnable {
-    constructor(string memory name, string memory symbol, uint256 creatorSupply, uint256 poolSupply, 
-                uint256 remainingParentSupply, address admin, address pool, address creator, 
-                address[] memory parentAddresses, uint256[] memory parentSupplies) ERC20(name, symbol) {
-        // Mint to the creator, the parents, and the pool of which this is a part.
-        _mint(creator, creatorSupply);
-        _mint(pool, poolSupply);
-        for (uint i=0; i < parentSupplies.length; i++) {
-            _mint(parentAddresses[i], parentSupplies[i]);
-        }     
-
-        // Mint the remaining parentSupply to the admin for storing and later giving out.
-        if (remainingParentSupply > 0) {
-            _mint(admin, remainingParentSupply);
-        }
-    }
-}
-
-/**
- * @title StorageV1
- * @author Cinjon
- */
-contract StorageV1 {}
 
 // This contract corresponds to a single unit. When instantiated, it holds a UnitCoin with this contract as the owner.
 // Args:
@@ -53,34 +24,31 @@ contract StorageV1 {}
 //   creatorAddress: the ethereum address of the creator.
 //   parentAddresses: the parent addresses, can be empty at init.
 //   parentSupplies: the associated parent supplies. should be the same size as the parent Addresses;
-contract UnitV1 is Ownable {
+contract UnitCoinV1 is Ownable, ERC20Burnable {
     // Identifyng info.
     string private _publicHash;
-    string private _publicUrl;
-    address private _creatorAddress;
+    string public publicUrl;
+    address public creatorAddress;
     string private _creatorName;
     // TODO: Is there a set class?
     mapping(address => bool) private _parentAddresses;
     uint8 numParents = 0;
 
     // Standard across units.
-    uint256 constant initialSupply = 10000;
-    uint256 constant poolSupply = 100; // 1% to pool.
+    uint256 constant initialSupply = 1000;
+    uint256 constant poolSupply = 10; // 1% to pool.
     uint256 constant maximumParentSize = 5;
-    uint256 remainingParentSupply = 1000; // 10% to parents. "tithe"
+    uint256 remainingParentSupply = 100; // 10% to parents. "tithe"
     uint256 creatorSupply = initialSupply - poolSupply - remainingParentSupply;
 
     // Holds the coin balances of this contract in storage. Makes isReleaseFunds checking easier;
     mapping(string => uint256) private _heldCoinBalances;
     
-    // The associated coin.
-    UnitCoin unitCoin; 
-    
-    constructor(string memory coinName, string memory coinSymbol, 
-                string memory publicHash, string memory publicUrl, 
-                string memory creatorName, address creatorAddress,
+    constructor(string memory name, string memory symbol, 
+                string memory publicHash, string memory publicUrl_, 
+                string memory creatorName, address creatorAddress_,
                 address adminAddress, address poolAddress,
-                address[] memory parentAddresses, uint256[] memory parentSupplies) Ownable() {       
+                address[] memory parentAddresses, uint256[] memory parentSupplies) Ownable() ERC20(name, symbol) {       
         console.log(" hi im consol logging");
         require(parentSupplies.length == parentAddresses.length, 
                 "parentSupplies and parentAddresses have different lengths.");
@@ -93,9 +61,9 @@ contract UnitV1 is Ownable {
 
         // The identifying information for this atom.
         _publicHash = publicHash;
-        _publicUrl = publicUrl;
+        publicUrl = publicUrl_;
         _creatorName = creatorName;
-        _creatorAddress = creatorAddress;
+        creatorAddress = creatorAddress_;
 
         string memory failureString;
         for (uint i=0; i < parentAddresses.length; i++) {
@@ -105,8 +73,16 @@ contract UnitV1 is Ownable {
             numParents += 1;
         }  
 
-        unitCoin = new UnitCoin(coinName, coinSymbol, creatorSupply, poolSupply, remainingParentSupply, adminAddress, 
-                                poolAddress, creatorAddress, parentAddresses, parentSupplies);
+        // Mint to the creator, the parents, and the pool of which this is a part.
+        _mint(creatorAddress, creatorSupply);
+        _mint(poolAddress, poolSupply);
+        for (uint i=0; i < parentSupplies.length; i++) {
+            _mint(parentAddresses[i], parentSupplies[i]);
+        }     
+        // Mint the remaining parentSupply to the admin for storing and later giving out.
+        if (remainingParentSupply > 0) {
+            _mint(adminAddress, remainingParentSupply);
+        }
     }
 
     // Add to the list of parents.
@@ -147,7 +123,7 @@ contract UnitV1 is Ownable {
         // 1. Make the graphql of this contract? Omg that sounds so ... not fun.
         // 2. Then implement the Audius version of the Uniswap merkle distributor.
         // 3. Each airdrop will be its own thing so we need to keep track of them.
-        require(msg.sender == _creatorAddress || msg.sender == this.owner() || msg.sender == address(this), 
+        require(msg.sender == creatorAddress || msg.sender == this.owner() || msg.sender == address(this), 
                 "Not a valid owner of airdrop");
     }
     

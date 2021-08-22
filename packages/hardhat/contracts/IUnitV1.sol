@@ -1,5 +1,5 @@
 interface IUnitV1 {
-  function addParents ( address[] newParentAddresses, uint256[] newParentSupplies ) external;
+  function addParents ( address[] memory newParentAddresses, uint256[] memory newParentSupplies ) external;
   function airdrop (  ) external;
   function owner (  ) external view returns ( address );
   function renounceOwnership (  ) external;
