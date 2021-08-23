@@ -26,50 +26,47 @@ contract PoolCoin is ERC20 {
 //   parentSupplies: the associated parent supplies. should be the same size as the parent Addresses;
 contract UnitCoinV1 is Ownable, ERC20Burnable {
     // Identifyng info.
-    string private _publicHash;
+    string public publicHash;
     string public publicUrl;
     address public creatorAddress;
-    string private _creatorName;
+    string public creatorName;
     // TODO: Is there a set class?
-    mapping(address => bool) private _parentAddresses;
-    uint8 numParents = 0;
+    mapping(address => bool) public parentAddresses;
+    uint8 public numParents = 0;
 
     // Standard across units.
     uint256 constant initialSupply = 1000;
     uint256 constant poolSupply = 10; // 1% to pool.
     uint256 constant maximumParentSize = 5;
-    uint256 remainingParentSupply = 100; // 10% to parents. "tithe"
+    uint256 public remainingParentSupply = 100; // 10% to parents. "tithe"
     uint256 creatorSupply = initialSupply - poolSupply - remainingParentSupply;
 
     // Holds the coin balances of this contract in storage. Makes isReleaseFunds checking easier;
     mapping(string => uint256) private _heldCoinBalances;
     
-    constructor(string memory name, string memory symbol, 
-                string memory publicHash, string memory publicUrl_, 
-                string memory creatorName, address creatorAddress_,
-                address adminAddress, address poolAddress,
-                address[] memory parentAddresses, uint256[] memory parentSupplies) Ownable() ERC20(name, symbol) {       
-        console.log(" hi im consol logging");
-        require(parentSupplies.length == parentAddresses.length, 
+    constructor(string memory name, string memory symbol, string memory publicHash_, string memory publicUrl_, 
+                string memory creatorName_, address creatorAddress_, address poolAddress, 
+                address[] memory parentAddresses_, uint256[] memory parentSupplies) Ownable() ERC20(name, symbol) {       
+        require(parentSupplies.length == parentAddresses_.length, 
                 "parentSupplies and parentAddresses have different lengths.");
         for (uint i=0; i < parentSupplies.length; i++) {
             remainingParentSupply -= parentSupplies[i];
-            require(address(this) != parentAddresses[i], "This unit's address was listed as a parent.");
-            require(creatorAddress != parentAddresses[i], "The creator address was listed as a parent.");            
+            require(address(this) != parentAddresses_[i], "This unit's address was listed as a parent.");
+            require(creatorAddress != parentAddresses_[i], "The creator address was listed as a parent.");            
         }        
         require(remainingParentSupply >= 0, "Parent coins were assigned more than the original parentSupply.");
 
         // The identifying information for this atom.
-        _publicHash = publicHash;
+        publicHash = publicHash_;
         publicUrl = publicUrl_;
-        _creatorName = creatorName;
+        creatorName = creatorName_;
         creatorAddress = creatorAddress_;
 
         string memory failureString;
-        for (uint i=0; i < parentAddresses.length; i++) {
-            failureString = append("Address is duplicated twice: ", toAsciiString(parentAddresses[i]));
-            require(!_parentAddresses[parentAddresses[i]], failureString);
-            _parentAddresses[parentAddresses[i]] = true;
+        for (uint i=0; i < parentAddresses_.length; i++) {
+            failureString = append("Address is duplicated twice: ", toAsciiString(parentAddresses_[i]));
+            require(!parentAddresses[parentAddresses_[i]], failureString);
+            parentAddresses[parentAddresses_[i]] = true;
             numParents += 1;
         }  
 
@@ -77,19 +74,15 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
         _mint(creatorAddress, creatorSupply);
         _mint(poolAddress, poolSupply);
         for (uint i=0; i < parentSupplies.length; i++) {
-            _mint(parentAddresses[i], parentSupplies[i]);
+            _mint(parentAddresses_[i], parentSupplies[i]);
         }     
-        // Mint the remaining parentSupply to the admin for storing and later giving out.
-        if (remainingParentSupply > 0) {
-            _mint(adminAddress, remainingParentSupply);
-        }
     }
 
     // Add to the list of parents.
     // The flow is that for any parents that we didn't have at the beginning, we add them later on as they onboard and
     // do a transfer from this address, which was holding the funds, to their address. Their address will be a 
     // Unit as well, so it will effect an airdrop. Can only be called by the owner.
-    function addParents(address[] memory newParentAddresses, uint256[] memory newParentSupplies) public onlyOwner {
+    function addParents(address payable[] memory newParentAddresses, uint256[] memory newParentSupplies) public onlyOwner {
         require(newParentAddresses.length == newParentSupplies.length, "Addresses and supplies differ in length.");
         require(numParents + newParentAddresses.length <= maximumParentSize, "|Parents| > maximum.");
 
@@ -100,17 +93,15 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
         require(totalNewParentSupply <= remainingParentSupply, "Not enough remaining supply for new parents.");
 
         for (uint i=0; i < newParentAddresses.length; i++) {
-            require(!_parentAddresses[newParentAddresses[i]], "Duplicate address over the full set of parents.");
-            _parentAddresses[newParentAddresses[i]] = true;
+            require(!parentAddresses[newParentAddresses[i]], "Duplicate address over the full set of parents.");
+            parentAddresses[newParentAddresses[i]] = true;
             numParents += 1;
         }
 
         string memory failureString;
         for (uint i=0; i < newParentAddresses.length; i++) {
-            // transfer the coin.
-            (bool sent, ) = newParentAddresses[i].call{value: newParentSupplies[i]}("");
-            failureString = append("Failed to send ether to ", toAsciiString(newParentAddresses[i]));
-            require(sent, failureString);
+            console.log(newParentSupplies[i]);
+            _mint(address(newParentAddresses[i]), newParentSupplies[i]);
             remainingParentSupply -= newParentSupplies[i];
         }        
     }
@@ -132,17 +123,17 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
         // _heldCoinBalances[msg.data] += msg.value;
     }
 
-    // Receives payment from an outside source. 
-    // Don't distribute the payment until triggered by the creator or the admin.
-    receive() external payable {
-        // TODO
-    }
+    // // Receives payment from an outside source. 
+    // // Don't distribute the payment until triggered by the creator or the admin.
+    // receive() external payable {
+    //     // TODO
+    // }
 
-    // Called when ether is sent to this contract but msg.data is not empty.
-    // Don't distribute the payment until triggered by the creator or the admin.
-    fallback() external payable {
-        // TODO
-    }
+    // // Called when ether is sent to this contract but msg.data is not empty.
+    // // Don't distribute the payment until triggered by the creator or the admin.
+    // fallback() external payable {
+    //     // TODO
+    // }
 
     function toAsciiString(address x) internal view returns (string memory) {
         bytes memory s = new bytes(40);

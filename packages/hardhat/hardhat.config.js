@@ -229,8 +229,11 @@ module.exports = {
     solcVersion: "0.7.6",
   },
   namedAccounts: {
+    frontend: {
+      default: "0x06D7B826826fc0b8480B002949D7d28b8CAd8242"
+    },
     deployer: {
-      default: 0, // here this will by default take the first account as deployer
+      default: 0,
     },
     allPool: {
       default: 1,
@@ -239,7 +242,7 @@ module.exports = {
       default: 2,
     },
     creator0: {
-      default: 3
+      default: 3,
     },
     creator1: {
       default: 4,
@@ -258,6 +261,9 @@ module.exports = {
     },
     creator6: {
       default: 9,
+    },
+    creator7: {
+      default: 10,
     },
   },
 };

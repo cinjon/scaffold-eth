@@ -19,7 +19,7 @@ export default function PeopleContracts({
   blockExplorer,
   userSigner,
   peopleAddresses,
-}) {
+}) {    
   const orderedContracts = Object.entries(readContracts).sort((a, b) => a[0].localeCompare(b[0]));
   const tables = orderedContracts.map(inorganic => {      
     const orderedAddresses = peopleAddresses.map(

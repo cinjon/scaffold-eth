@@ -16,8 +16,9 @@ export default function InorganicContracts({
   blockExplorer,
   userSigner,
 }) {
-  const orderedContracts = Object.entries(readContracts).sort((a, b) => a[0].localeCompare(b[0])).map(
-      contractArr => <div><Contract name={contractArr[0]} customContract={contractArr[1]} signer={userSigner} provider={localProvider} address={address} blockExplorer={blockExplorer} /><br /><br /></div>)
+
+  const orderedContracts = readContracts ? Object.entries(readContracts).sort((a, b) => a[0].localeCompare(b[0])).map(
+      contractArr => <div key={contractArr[0]}><Contract name={contractArr[0]} customContract={contractArr[1]} signer={userSigner} provider={localProvider} address={address} blockExplorer={blockExplorer} /><br /><br /></div>) : null
 
   return (
     <div>
