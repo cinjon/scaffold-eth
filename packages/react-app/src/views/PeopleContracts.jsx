@@ -18,14 +18,15 @@ export default function PeopleContracts({
   readContracts,
   blockExplorer,
   userSigner,
-  peopleAddresses,
+  peopleAddresses,  
 }) {    
   const orderedContracts = Object.entries(readContracts).sort((a, b) => a[0].localeCompare(b[0]));
+  const addresses = peopleAddresses.concat(Object.entries(readContracts).map(contract => [contract[0], contract[1].address]))
   const tables = orderedContracts.map(inorganic => {      
-    const orderedAddresses = peopleAddresses.map(
+    const orderedAddresses = addresses.map(
           contractArr => {
             return (
-            <div key={contractArr[0]}>
+            <div key={inorganic[0] + "-" + contractArr[0]}>
               <Address address={contractArr[1]} name={contractArr[0]} ensProvider={localProvider} />
               <Balance address={contractArr[1]} provider={localProvider} />
               <TokenBalance address={contractArr[1]} contracts={readContracts} name={inorganic[0]}/>

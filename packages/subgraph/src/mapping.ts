@@ -1,34 +1,69 @@
+/// <reference types="node" />
+
 import { BigInt, Address } from "@graphprotocol/graph-ts"
 import {
-  YourContract,
-  SetPurpose
-} from "../generated/YourContract/YourContract"
-import { Purpose, Sender } from "../generated/schema"
+  Unit4,
+  Transfer
+} from "../generated/Unit4/Unit4"
+import { Balance, Unit, User, UserUnit } from "../generated/schema"
 
-export function handleSetPurpose(event: SetPurpose): void {
+export function handleTransfer(event: Transfer): void {
+  let fromAddress = event.params.from;
+  let fromString = fromAddress.toHexString();
+  let toString = event.params.to.toHexString();
+  let amount = event.params.value;
+  // How do i get what type of token is this transfer...?
+  // Do we need to override Transfer(...)?
 
-  let senderString = event.params.sender.toHexString()
+  let transferAddress = event.address;
+  let transferAddressString = transferAddress.toHexString();
+  let fromUserUnitID = fromString + "-" + transferAddressString;
+  let toUserUnitID = toString + "-" + transferAddressString;  
 
-  let sender = Sender.load(senderString)
-
-  if (sender == null) {
-    sender = new Sender(senderString)
-    sender.address = event.params.sender
-    sender.createdAt = event.block.timestamp
-    sender.purposeCount = BigInt.fromI32(1)
+  let unit = Unit.load(transferAddressString);
+  if (unit == null) {
+    unit = new Unit(transferAddressString);
+    unit.createdAt = event.block.timestamp;
+    unit.address = transferAddress;
   }
-  else {
-    sender.purposeCount = sender.purposeCount.plus(BigInt.fromI32(1))
+
+  let fromUserUnit = UserUnit.load(fromUserUnitID);
+  let fromUser = User.load(fromString);
+
+  let updateFrom = false;
+  if (!(fromAddress.toI32() == 0)) {
+    // We are not minting.
+    fromUser.balance -= amount;
+    fromUserUnit.balance -= amount;    
+    updateFrom = true;
+  } 
+  
+  let toUserUnit = UserUnit.load(toUserUnitID);
+  let toUser = User.load(toString);
+  if (toUser == null) {
+    toUser = new User(toString);
+    toUser.address = event.params.to;
+    toUser.createdAt = event.block.timestamp;
+    toUser.balance = BigInt.fromI32(0);
   }
+  toUser = toUser as User;
+  unit = unit as Unit;
+  
+  if (toUserUnit == null) {
+    toUserUnit = new UserUnit(toUserUnitID);
+    toUserUnit.user = toString; //  <User> toUser;
+    toUserUnit.unit = transferAddressString; // <Unit> unit;
+    toUserUnit.balance = BigInt.fromI32(0);
+  }
+  toUserUnit.balance += amount;  
 
-  let purpose = new Purpose(event.transaction.hash.toHex() + "-" + event.logIndex.toString())
-
-  purpose.purpose = event.params.purpose
-  purpose.sender = senderString
-  purpose.createdAt = event.block.timestamp
-  purpose.transactionHash = event.transaction.hash.toHex()
-
-  purpose.save()
-  sender.save()
-
+  toUser.balance += amount;
+  if (updateFrom) {
+    fromUser.save();
+    fromUserUnit.save();
+  }
+  toUser.save();
+  toUserUnit.save();
+  unit.save();
 }
+

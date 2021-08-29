@@ -3,23 +3,48 @@ schema:
   file: ./src/schema.graphql
 dataSources:
   - kind: ethereum/contract
-    name: YourContract
+    name: Unit4
     network: localhost
     source:
-      address: "{{localhost_YourContractAddress}}"
-      abi: YourContract
+      address: "{{localhost_Unit4Address}}"
+      abi: Unit4
       startBlock: 1
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.4
       language: wasm/assemblyscript
       entities:
-        - Purpose
-        - Sender
+        - User
+        - Unit
+        - UserUnit
+        - Balance
       abis:
-        - name: YourContract
-          file: ./abis/localhost_YourContract.json
+        - name: Unit4
+          file: ./abis/localhost_Unit4.json
       eventHandlers:
-        - event: SetPurpose(address,string)
-          handler: handleSetPurpose
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
       file: ./src/mapping.ts
+  - kind: ethereum/contract
+    name: Unit2
+    network: localhost
+    source:
+      address: "{{localhost_Unit2Address}}"
+      abi: Unit2
+      startBlock: 1
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - User
+        - Unit
+        - UserUnit
+        - Balance
+      abis:
+        - name: Unit2
+          file: ./abis/localhost_Unit2.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+      file: ./src/mapping.ts      

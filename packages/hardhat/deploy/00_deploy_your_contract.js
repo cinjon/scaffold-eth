@@ -6,8 +6,8 @@ module.exports = async ({ getNamedAccounts, getUnnamedAccounts, deployments }) =
   const { deploy } = deployments;
   const { frontend, admin, allPool, creator0, creator1, creator2, creator3, creator4, creator5, creator6, creator7, deployer } = await getNamedAccounts();
 
-  getNamedAccounts().then(accounts => {console.log('gna'); console.log(accounts);})
-  getUnnamedAccounts().then(accounts => {console.log('una'); console.log(accounts);})
+  getNamedAccounts().then(accounts => {console.log('Get Named Accounts'); console.log(accounts);})
+  getUnnamedAccounts().then(accounts => {console.log('Get Unnamed Accounts'); console.log(accounts);})
 
   const poolCoin = await deploy("PoolCoin", {
     from: deployer,
@@ -72,8 +72,40 @@ module.exports = async ({ getNamedAccounts, getUnnamedAccounts, deployments }) =
     log: true,
   });
 
-  const tokenU4 = await ethers.getContractAt("UnitCoinV1", u4.address);
-  const transferOwner = await tokenU4.transferOwnership("0x06D7B826826fc0b8480B002949D7d28b8CAd8242")
+  // const tokenU4 = await ethers.getContractAt("UnitCoinV1", u4.address);  
+  // await tokenU4.transferOwnership("0x06D7B826826fc0b8480B002949D7d28b8CAd8242")
+  const deployerWallet = ethers.provider.getSigner();
+  console.log(deployerWallet);
+  console.log('*****');
+  // await creator0.sendTransaction({to: creator1, value: ethers.utils.parseEther("0.1")})
+
+  [owner] = await ethers.getSigners();
+  console.log(owner)
+  
+  const transactionHash = await owner.sendTransaction({
+    to: creator0, // "contract address",
+    value: ethers.utils.parseEther("1.0"), // Sends exactly 1.0 ether
+  });
+  console.log(transactionHash);
+
+  // // Acccounts now exposed
+  // const params = [{
+  //   from: creator1,
+  //   to: creator2,
+  //   value: ethers.utils.parseEther("0.1") // ethers.utils.parseUnits("0.1", 'ether').toHexString()
+  // }];
+
+  // const transactionHash = await ethers.provider.send('eth_sendTransaction', params)
+  // console.log('transactionHash is ' + transactionHash);
+
+  // const creator0Artifact = await ethers.getContractAt("Creator0", creator0);
+  // console.log(creator0Artifact);
+  // await ethers.getContractAt("UnitCoinV1", u4.address);
+  // await tokenU4.transferOwnership("0x06D7B826826fc0b8480B002949D7d28b8CAd8242")
+  // await tokenU4.transferOwnership("0x06D7B826826fc0b8480B002949D7d28b8CAd8242")
+  // await tokenU4.transferOwnership("0x06D7B826826fc0b8480B002949D7d28b8CAd8242")
+
+  // Ok, so now let's pass around some coins.
 
   /*
     // Getting a previously deployed contract

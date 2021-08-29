@@ -80,8 +80,9 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
 
     // Add to the list of parents.
     // The flow is that for any parents that we didn't have at the beginning, we add them later on as they onboard and
-    // do a transfer from this address, which was holding the funds, to their address. Their address will be a 
-    // Unit as well, so it will effect an airdrop. Can only be called by the owner.
+    // do a mint from this address to their address. This increases the total supply but not beyond a pre-defined max.
+    // Their address will be a Unit as well. Can only be called by the owner of this contract.
+    // Note that doing it this way means that the airdrop logic has to account for it as well. We can punt that.
     function addParents(address payable[] memory newParentAddresses, uint256[] memory newParentSupplies) public onlyOwner {
         require(newParentAddresses.length == newParentSupplies.length, "Addresses and supplies differ in length.");
         require(numParents + newParentAddresses.length <= maximumParentSize, "|Parents| > maximum.");
@@ -100,7 +101,6 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
 
         string memory failureString;
         for (uint i=0; i < newParentAddresses.length; i++) {
-            console.log(newParentSupplies[i]);
             _mint(address(newParentAddresses[i]), newParentSupplies[i]);
             remainingParentSupply -= newParentSupplies[i];
         }        
@@ -109,7 +109,7 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
     // Airdrop held payment to all coin holders.
     // We take the held balances in our contract and distribute it proportionally to the unitCoin holders.
     // Can only be called by this contract, creatorAddress, or the owner.
-    function airdrop() public {
+    function triggerAirdropToTokenHolders() public {
         // TODO:
         // 1. Make the graphql of this contract? Omg that sounds so ... not fun.
         // 2. Then implement the Audius version of the Uniswap merkle distributor.
@@ -118,23 +118,6 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
                 "Not a valid owner of airdrop");
     }
     
-    function _triggerPayment() private {
-        // TODO: What type of coin are we receiving?
-        // _heldCoinBalances[msg.data] += msg.value;
-    }
-
-    // // Receives payment from an outside source. 
-    // // Don't distribute the payment until triggered by the creator or the admin.
-    // receive() external payable {
-    //     // TODO
-    // }
-
-    // // Called when ether is sent to this contract but msg.data is not empty.
-    // // Don't distribute the payment until triggered by the creator or the admin.
-    // fallback() external payable {
-    //     // TODO
-    // }
-
     function toAsciiString(address x) internal view returns (string memory) {
         bytes memory s = new bytes(40);
         for (uint i = 0; i < 20; i++) {
