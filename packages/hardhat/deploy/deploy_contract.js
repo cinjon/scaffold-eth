@@ -88,15 +88,15 @@ module.exports = async ({ getNamedAccounts, getUnnamedAccounts, deployments }) =
   });
   console.log(transactionHash);
 
-  // // Acccounts now exposed
-  // const params = [{
-  //   from: creator1,
-  //   to: creator2,
-  //   value: ethers.utils.parseEther("0.1") // ethers.utils.parseUnits("0.1", 'ether').toHexString()
-  // }];
+  // Acccounts now exposed
+  const params = [{
+    from: creator1,
+    to: creator2,
+    value: ethers.utils.parseEther("0.1") // ethers.utils.parseUnits("0.1", 'ether').toHexString()
+  }];
 
-  // const transactionHash = await ethers.provider.send('eth_sendTransaction', params)
-  // console.log('transactionHash is ' + transactionHash);
+  const transactionHash = await ethers.provider.send('eth_sendTransaction', params)
+  console.log('transactionHash is ' + transactionHash);
 
   // const creator0Artifact = await ethers.getContractAt("Creator0", creator0);
   // console.log(creator0Artifact);
