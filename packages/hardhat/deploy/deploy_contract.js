@@ -95,8 +95,8 @@ module.exports = async ({ getNamedAccounts, getUnnamedAccounts, deployments }) =
     value: ethers.utils.parseEther("0.1") // ethers.utils.parseUnits("0.1", 'ether').toHexString()
   }];
 
-  const transactionHash = await ethers.provider.send('eth_sendTransaction', params)
-  console.log('transactionHash is ' + transactionHash);
+  const transactionHash2 = await ethers.provider.send('eth_sendTransaction', params)
+  console.log('transactionHash is ' + transactionHash2);
 
   // const creator0Artifact = await ethers.getContractAt("Creator0", creator0);
   // console.log(creator0Artifact);
