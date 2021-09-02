@@ -1,32 +1,6 @@
-type Unit @entity {
-  "We want to know what tokens this Unit has. We see that in the myBalances lookup. We also want to know which users have this token. We see that in the holders lookup."
-  id: ID!
-  createdAt: BigInt!
-  address: Bytes!  
-  myBalances: [Balance!] @derivedFrom(field: "owner")
-  holders: [UserUnit!] @derivedFrom(field: "unit")
-}
-
 type User @entity {
   id: ID!
   createdAt: BigInt!
   address: Bytes!
-  "Balance is here for deubggin"
   balance: BigInt!
-  units: [UserUnit!] @derivedFrom(field: "user")
-}
-
-type UserUnit @entity {
-  id: ID!
-  user: User!
-  unit: Unit!
-  balance: BigInt!
-}
-
-type Balance @entity {
-  id: ID!
-  owner: Unit!
-  tokenAddress: Bytes!
-  amount: BigInt!
-  createdAt: BigInt!
 }

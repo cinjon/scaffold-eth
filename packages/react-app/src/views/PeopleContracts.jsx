@@ -22,7 +22,7 @@ export default function PeopleContracts({
 }) {    
   const orderedContracts = Object.entries(readContracts).sort((a, b) => a[0].localeCompare(b[0]));
   const addresses = peopleAddresses.concat(Object.entries(readContracts).map(contract => [contract[0], contract[1].address]))
-  const tables = orderedContracts.map(inorganic => {      
+  const tables = orderedContracts.filter(inorganic => inorganic[0] == "Unit4").map(inorganic => {      
     const orderedAddresses = addresses.map(
           contractArr => {
             return (
