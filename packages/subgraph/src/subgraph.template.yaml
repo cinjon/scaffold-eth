@@ -3,11 +3,11 @@ schema:
   file: ./src/schema.graphql
 dataSources:
   - kind: ethereum/contract
-    name: Unit4
+    name: Unit0
     network: localhost
     source:
-      address: "{{localhost_Unit4Address}}"
-      abi: Unit4
+      address: "{{localhost_Unit0Address}}"
+      abi: Unit0
       startBlock: 1
     mapping:
       kind: ethereum/events
@@ -17,14 +17,35 @@ dataSources:
         - User
         - Unit
         - UserUnit
-        - Balance
       abis:
-        - name: Unit4
-          file: ./abis/localhost_Unit4.json
+        - name: Unit0
+          file: ./abis/localhost_Unit0.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
-      file: ./src/mapping.ts
+      file: ./src/mapping.ts   
+  - kind: ethereum/contract
+    name: Unit1
+    network: localhost
+    source:
+      address: "{{localhost_Unit1Address}}"
+      abi: Unit1
+      startBlock: 1
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - User
+        - Unit
+        - UserUnit
+      abis:
+        - name: Unit1
+          file: ./abis/localhost_Unit1.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+      file: ./src/mapping.ts    
   - kind: ethereum/contract
     name: Unit2
     network: localhost
@@ -40,11 +61,55 @@ dataSources:
         - User
         - Unit
         - UserUnit
-        - Balance
       abis:
         - name: Unit2
           file: ./abis/localhost_Unit2.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleTransfer
-      file: ./src/mapping.ts      
+      file: ./src/mapping.ts    
+  - kind: ethereum/contract
+    name: Unit3
+    network: localhost
+    source:
+      address: "{{localhost_Unit3Address}}"
+      abi: Unit3
+      startBlock: 1
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - User
+        - Unit
+        - UserUnit
+      abis:
+        - name: Unit3
+          file: ./abis/localhost_Unit3.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+      file: ./src/mapping.ts    
+  - kind: ethereum/contract
+    name: Unit4
+    network: localhost
+    source:
+      address: "{{localhost_Unit4Address}}"
+      abi: Unit4
+      startBlock: 1
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.4
+      language: wasm/assemblyscript
+      entities:
+        - User
+        - Unit
+        - UserUnit
+      abis:
+        - name: Unit4
+          file: ./abis/localhost_Unit4.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+      file: ./src/mapping.ts
+  

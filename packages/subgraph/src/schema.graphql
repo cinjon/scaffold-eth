@@ -1,6 +1,21 @@
+type Unit @entity {
+  id: ID!
+  createdAt: BigInt!
+  address: Bytes!
+  holders: [UserUnit!] @derivedFrom(field: "unit")
+}
+
 type User @entity {
   id: ID!
   createdAt: BigInt!
   address: Bytes!
-  balance: BigInt!
+  "Balance is here for deubggin"
+  units: [UserUnit!] @derivedFrom(field: "user")  
+}
+
+type UserUnit @entity {
+  id: ID!
+  user: User!
+  unit: Unit!
+  balance: BigInt!  
 }
