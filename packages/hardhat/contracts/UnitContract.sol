@@ -16,12 +16,9 @@ contract PoolCoin is ERC20 {
 }
 
 // *** Initialization ***
-// The unit U is minted by creator C and has an associated pool P. C immediately receives the vast allotment minted to
-// their address. P receives a small amount minted to their address.
-// *** Parent update ***
-// When a list of new parents are assigned to U, then they get their supply minted. These tokens are new supply and we 
-// do not try to account for anything going to them beforehand - it pays to mint earlier. The supply is minted to a 
-// Merkle distributor which is already up and running beforehand.
+// The unit U is minted by creator C and has an associated pool P and parents S. C immediately receives the vast 
+// allotment minted to their address. P receives a small amount minted to their address. S receives the mint but to a
+// Merkle that they need to claim. S may consist of a dummy paper.
 // *** Payment sent to U ***
 // We've already committed payment to parents by giving to their tokens. So at this point, we just need to make an 
 // airdrop to all the holders. When that's triggered, we start another Merkle distributor and gift that distributor
@@ -37,93 +34,74 @@ contract PoolCoin is ERC20 {
 
 // This contract corresponds to a single unit. When instantiated, it holds a UnitCoin with this contract as the owner.
 // Args:
-//   coinName: the name of this coin.
-//   coinSymbol: the symbol of this coin.
-//   publicUrl: the url where this creation lives and where we can find the publicHash.
+//   name: the name of this coin.
+//   symbol: the symbol of this coin.
 //   publicHash: the hash that was put into the creation in order to identify it.
+//   publicUrl: the url where this creation lives and where we can find the publicHash.
 //   creatorName: the name of the creator, e.g. Cinjon Resnick.
 //   creatorAddress: the ethereum address of the creator.
+//   poolAddress: the ethereum address of the pool.
+//   parentAddresses: the parent ethereum addresses, for posterity to save.
+//   parentMerkleAddress: the ethereum address of the creator.
 contract UnitCoinV1 is Ownable, ERC20Burnable {
     // Identifyng info.
     string public publicHash;
     string public publicUrl;
     address public creatorAddress;
     string public creatorName;
-    mapping(address => bool) public parentAddresses;
-    uint8 public numParents = 0;
+    address[] private _parentAddresses;
+    uint8 public numParents;
     address[] private _claimDistributors;
 
     // Standard across units.
     uint256 constant initialSupply = 1000;
     uint256 constant poolSupply = 10; // 1% to pool.
     uint256 constant maximumParentSize = 5;
-    uint256 public remainingParentSupply = 100; // 10% to parents. "tithe"
-    uint256 creatorSupply = initialSupply - poolSupply - remainingParentSupply;
+    uint256 constant parentSupply = 100; // 10% to parents. "tithe"
+    uint256 creatorSupply = initialSupply - poolSupply - parentSupply;
 
     constructor(string memory name, string memory symbol, string memory publicHash_, string memory publicUrl_, 
-                string memory creatorName_, address creatorAddress_, address poolAddress) Ownable() ERC20(name, symbol) {       
+                string memory creatorName_, address creatorAddress_, address poolAddress, 
+                address[] parentAddresses, address parentMerkleAddress) Ownable() ERC20(name, symbol) {       
         // The identifying information for this atom.
         publicHash = publicHash_;
         publicUrl = publicUrl_;
         creatorName = creatorName_;
         creatorAddress = creatorAddress_;
+        numParents = parentAddressList.length;
+        _checkParents(parentAddresses);
+        _parentAddresses = parentAddresses;
 
-        // Mint to the creator and the pool of which this is a part.
+        // Mint to the creator, the pool of which this is a part, and the parentMerkle for parents to claim. That might
+        // include dummy parents.
         _mint(creatorAddress, creatorSupply);
         _mint(poolAddress, poolSupply);
+        _mint(parentMerkleAddress, parentSupply);
+        _claimDistributors.push(parentMerkleAddress);
     }
 
-    function _checkNewParents(address payable[] memory newParentAddresses, uint256[] memory newParentSupplies) private {
-        require(newParentAddresses.length == newParentSupplies.length, "Addresses and supplies differ in length.");
-        uint8 newNumParents = numParents + uint8(newParentAddresses.length);
-        require(newNumParents <= maximumParentSize, "|Parents| > maximum.");
-
-        uint256 totalNewParentSupply;
-        for (uint i=0; i < newParentSupplies.length; i++) {
-            totalNewParentSupply += newParentSupplies[i];
-
-            require(address(this) != newParentAddresses[i], "This unit's address was listed as a parent.");
-            require(creatorAddress != newParentAddresses[i], "The creator address was listed as a parent.");            
+    function _checkParents(address[] memory parentAddressses) private {
+        require(parentAddressses.length <= maximumParentSize, "|Parents| > maximum.");
+        for (uint i=0; i < parentAddressses.length; i++) {
+            require(address(this) != parentAddressses[i], "This unit's address was listed as a parent.");
+            require(creatorAddress != parentAddressses[i], "The creator address was listed as a parent.");            
         }       
-        require(totalNewParentSupply <= remainingParentSupply, "Not enough remaining supply for new parents.");
 
-        for (uint i=0; i < newParentAddresses.length; i++) {
-            require(!parentAddresses[newParentAddresses[i]], "Duplicate address over the full set of parents.");
+        mapping(address => bool) parentCheck;
+        for (uint i=0; i < parentAddressses.length; i++) {
+            require(!parentCheck[parentAddressses[i]], "Duplicate address over the full set of parents.");
+            parentCheck[parentAddressses[i]] = true;
         }
+    }
 
-        require(newNumParents < maximumParentSize || remainingParentSupply > totalNewParentSupply, 
-                "We would reach the maximum parent size while still having supply remaining.");
+    function getParents() public returns (address[] memory) {
+        return _parentAddresses;
     }
 
     function getClaimDistributorAddresses() public returns (address[] memory) {
         return _claimDistributors;
     }
-
-    // Add to the list of parents via airdropping with a MerkleDistributor. This will take the tokens set aside for 
-    // these parents and airdrop them to the holders of those parents via a MerkleDistributor.
-    function addParentsAndAirdrop(address payable[] memory newParentAddresses, uint256[] memory newParentSupplies, 
-                                  address payable distributorAddress) public onlyOwner {
-        _checkNewParents(newParentAddresses, newParentSupplies);
-
-        uint256 thisParentSupply = 0;
-        for (uint i=0; i < newParentAddresses.length; i++) {
-            parentAddresses[newParentAddresses[i]] = true;
-            thisParentSupply += newParentSupplies[i];
-        }
-        numParents += uint8(newParentAddresses.length);
-
-        _mint(distributorAddress, thisParentSupply);
-        remainingParentSupply -= thisParentSupply;
-        _claimDistributors.push(distributorAddress);
-    }
     
-    // Ahhhh fuck. I don't think this thing is going to work.
-    // I was going to allow holders to claim their ETH / USDC / DOGE / etc, based on how much of the tokens they have.
-    // Wait, we can do this. We know at the last snapshot how much they have. 
-    // ... Hmm, by far the easier solution wrt bookkeeping would be to deploy a MerkleDistributor instead of trying to
-    // account for what users have taken what and when everything came in. That would otherwise be hard.
-    // In this other way we would take everything we have re Airdrop and move them to a new MerkleDistributor that has
-    // who owns what. So this transfer would be expensive, it's true, but it would also be the only thing...
     function sendHoldingsToDistributor(address payable distributorAddress) public onlyOwner {
         string memory failureString = append("Transfer from Unit to Distributor ", toAsciiString(distributorAddress));
         require(_sendUSDCToDistributor(distributorAddress), append(failureString, " failed for USDC."));
