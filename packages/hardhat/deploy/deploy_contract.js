@@ -1,5 +1,4 @@
 // deploy/00_deploy_your_contract.js
-
 const { ethers, getUnnamedAccounts } = require("hardhat");
 
 module.exports = async ({ getNamedAccounts, getUnnamedAccounts, deployments }) => {
@@ -46,87 +45,83 @@ module.exports = async ({ getNamedAccounts, getUnnamedAccounts, deployments }) =
   //   }  
   // }
 
-  // Make the Poolcoin and the Unit coins with not parents.
-  const poolCoin = await deploy("PoolCoin", {
-    from: deployer,
-    args: [],
-    log: true
-  });
+  // // Make the Poolcoin and the Unit coins with not parents.
+  // const poolCoin = await deploy("PoolCoin", {
+  //   from: deployer,
+  //   args: [],
+  //   log: true
+  // });
 
-  const u0 = await deploy("Unit0", {
-    from: deployer,
-    contract: "UnitCoinV1",
-    args: ["Unit0", "U0", "hash0", "url0", "creator0", creator0, allPool],
-    log: true,
-  });
+  // const u0 = await deploy("Unit0", {
+  //   from: deployer,
+  //   contract: "UnitCoinV1",
+  //   args: ["Unit0", "U0", "hash0", "url0", "creator0", creator0, allPool],
+  //   log: true,
+  // });
 
 
-  const u1 = await deploy("Unit1", {
-    from: deployer,
-    contract: "UnitCoinV1",
-    args: ["Unit1", "U1", "hash1", "url1", "creator1", creator1, allPool],
-    log: true,
-  });
+  // const u1 = await deploy("Unit1", {
+  //   from: deployer,
+  //   contract: "UnitCoinV1",
+  //   args: ["Unit1", "U1", "hash1", "url1", "creator1", creator1, allPool],
+  //   log: true,
+  // });
 
-  const u2 = await deploy("Unit2", {
-    from: deployer,
-    contract: "UnitCoinV1",
-    args: ["Unit2", "U2", "hash2", "url2", "creator2", creator2, allPool],
-    log: true,
-  });
+  // const u2 = await deploy("Unit2", {
+  //   from: deployer,
+  //   contract: "UnitCoinV1",
+  //   args: ["Unit2", "U2", "hash2", "url2", "creator2", creator2, allPool],
+  //   log: true,
+  // });
 
-  const u3 = await deploy("Unit3", {
-    from: deployer,
-    contract: "UnitCoinV1",
-    args: ["Unit3", "U3", "hash3", "url3", "creator3", creator3, allPool],
-    log: true,
-  });
+  // const u3 = await deploy("Unit3", {
+  //   from: deployer,
+  //   contract: "UnitCoinV1",
+  //   args: ["Unit3", "U3", "hash3", "url3", "creator3", creator3, allPool],
+  //   log: true,
+  // });
 
-  const u4 = await deploy("Unit4", {
-    from: deployer,
-    contract: "UnitCoinV1",
-    args: ["Unit4", "U4", "hash4", "url4", "creator4", creator4, allPool],
-    log: true,
-  });
+  // const u4 = await deploy("Unit4", {
+  //   from: deployer,
+  //   contract: "UnitCoinV1",
+  //   args: ["Unit4", "U4", "hash4", "url4", "creator4", creator4, allPool],
+  //   log: true,
+  // });
 
-  const u5 = await deploy("Unit5", {
-    from: deployer,
-    contract: "UnitCoinV1",
-    args: ["Unit5", "U5", "hash5", "url5", "creator5", creator5, allPool],
-    log: true,
-  });
+  // const u5 = await deploy("Unit5", {
+  //   from: deployer,
+  //   contract: "UnitCoinV1",
+  //   args: ["Unit5", "U5", "hash5", "url5", "creator5", creator5, allPool],
+  //   log: true,
+  // });
 
-  const u6 = await deploy("Unit6", {
-    from: deployer,
-    contract: "UnitCoinV1",
-    args: ["Unit6", "U6", "hash6", "url6", "creator6", creator6, allPool],
-    log: true,
-  });
+  // const u6 = await deploy("Unit6", {
+  //   from: deployer,
+  //   contract: "UnitCoinV1",
+  //   args: ["Unit6", "U6", "hash6", "url6", "creator6", creator6, allPool],
+  //   log: true,
+  // });
 
-  const u7 = await deploy("Unit7", {
-    from: deployer,
-    contract: "UnitCoinV1",
-    args: ["Unit7", "U7", "hash7", "url7", "creator7", creator7, allPool],
-    log: true,
-  });
+  // const u7 = await deploy("Unit7", {
+  //   from: deployer,
+  //   contract: "UnitCoinV1",
+  //   args: ["Unit7", "U7", "hash7", "url7", "creator7", creator7, allPool],
+  //   log: true,
+  // });
 
   
-  // NOTE: This is not working :(
-  const tokenU4 = await ethers.getContractAt("UnitCoinV1", u4.address);  
-  // await tokenU4.transferOwnership("0x06D7B826826fc0b8480B002949D7d28b8CAd8242")  
+  // // NOTE: This is not working :(
+  // const tokenU4 = await ethers.getContractAt("UnitCoinV1", u4.address);  
+  // // await tokenU4.transferOwnership("0x06D7B826826fc0b8480B002949D7d28b8CAd8242")  
   
-  // Transfer some Unit4 from account 4 to account 6 and 7.
-  const trans1 = await tokenU4.connect(accounts[4]).transfer(creatorAddresses[7], 25)
-  const trans2 = await tokenU4.connect(accounts[4]).transfer(creatorAddresses[6], 55)
-  // Transfer some Unit4 from account 6 to account 3.
-  const trans3 = await tokenU4.connect(accounts[6]).transfer(creatorAddresses[3], 8)
-  // Transfer some Unit4 from account 7 to account 0.
-  const trans4 = await tokenU4.connect(accounts[7]).transfer(creatorAddresses[0], 7)
-  console.log(tokenU4);
-  console.log(trans1.value);
-  console.log(trans2.value);
-  console.log(trans3.value);
-  console.log(trans4.value);
+  // // Transfer some Unit4 from account 4 to account 6 and 7.
+  // const trans1 = await tokenU4.connect(accounts[4]).transfer(creatorAddresses[7], 25)
+  // const trans2 = await tokenU4.connect(accounts[4]).transfer(creatorAddresses[6], 55)
+  // // Transfer some Unit4 from account 6 to account 3.
+  // const trans3 = await tokenU4.connect(accounts[6]).transfer(creatorAddresses[3], 8)
+  // // Transfer some Unit4 from account 7 to account 0.
+  // const trans4 = await tokenU4.connect(accounts[7]).transfer(creatorAddresses[0], 7)
+    
 
 
   // Below this is stuff that was here before that we want to keep for 

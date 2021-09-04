@@ -33,6 +33,7 @@
     "authereum": "^0.1.14",
     "axios": "^0.20.0",
     "bnc-notify": "^1.5.0",
+    "cross-fetch": "^3.1.4",
     "dotenv": "^8.2.0",
     "eth-hooks": "^1.1.2",
     "ethers": "^5.4.4",
@@ -84,6 +85,7 @@
   },
   "scripts": {
     "build": "react-scripts build",
+    "create_graph_csv": "node ./scripts/create_graph_csv.js",
     "eject": "react-scripts eject",
     "prestart": "node ./scripts/create_contracts.js",
     "start": "react-scripts start",

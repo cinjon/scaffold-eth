@@ -52,6 +52,7 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
     address[] private _parentAddresses;
     uint8 public numParents;
     address[] private _claimDistributors;
+    mapping(address => bool) _parentCheck;
 
     // Standard across units.
     uint256 constant initialSupply = 1000;
@@ -62,13 +63,13 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
 
     constructor(string memory name, string memory symbol, string memory publicHash_, string memory publicUrl_, 
                 string memory creatorName_, address creatorAddress_, address poolAddress, 
-                address[] parentAddresses, address parentMerkleAddress) Ownable() ERC20(name, symbol) {       
+                address[] memory parentAddresses, address parentMerkleAddress) Ownable() ERC20(name, symbol) {       
         // The identifying information for this atom.
         publicHash = publicHash_;
         publicUrl = publicUrl_;
         creatorName = creatorName_;
         creatorAddress = creatorAddress_;
-        numParents = parentAddressList.length;
+        numParents = uint8(parentAddresses.length);
         _checkParents(parentAddresses);
         _parentAddresses = parentAddresses;
 
@@ -87,10 +88,9 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
             require(creatorAddress != parentAddressses[i], "The creator address was listed as a parent.");            
         }       
 
-        mapping(address => bool) parentCheck;
         for (uint i=0; i < parentAddressses.length; i++) {
-            require(!parentCheck[parentAddressses[i]], "Duplicate address over the full set of parents.");
-            parentCheck[parentAddressses[i]] = true;
+            require(!_parentCheck[parentAddressses[i]], "Duplicate address over the full set of parents.");
+            _parentCheck[parentAddressses[i]] = true;
         }
     }
 
