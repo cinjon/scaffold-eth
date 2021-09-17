@@ -5,15 +5,9 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./ClaimDistributor.sol";
 
-contract PoolCoin is ERC20 {
-    constructor() ERC20("Pool", "PCO") public {
-        _mint(msg.sender, 1000);
-    }
-}
 
 // *** Initialization ***
 // The unit U is minted by creator C and has an associated pool P and parents S. C immediately receives the vast 
@@ -36,82 +30,107 @@ contract PoolCoin is ERC20 {
 // Args:
 //   name: the name of this coin.
 //   symbol: the symbol of this coin.
-//   publicHash: the hash that was put into the creation in order to identify it.
 //   publicUrl: the url where this creation lives and where we can find the publicHash.
 //   creatorName: the name of the creator, e.g. Cinjon Resnick.
 //   creatorAddress: the ethereum address of the creator.
-//   poolAddress: the ethereum address of the pool.
-//   parentAddresses: the parent ethereum addresses, for posterity to save.
+//   poolAddress: the ethereum address of the pool to which this belonds.
+//   parentIDs: the parent string identification information, for posterity to save.
+//   knownParentAddresses: the known ethereum addresses for the parents. 
 //   parentMerkleAddress: the ethereum address of the creator.
-contract UnitCoinV1 is Ownable, ERC20Burnable {
+contract UnitCoinV1 is Ownable, ERC20Capped {
+    event Distribution(address distributoAddress, uint256 balance);
+
     // Identifyng info.
-    string public publicHash;
     string public publicUrl;
     address public creatorAddress;
     string public creatorName;
-    address[] private _parentAddresses;
-    uint8 public numParents;
-    address[] private _claimDistributors;
-    mapping(address => bool) _parentCheck;
+    string[] public parentIDs;
+    address[] public knownParentAddresses;
+    address[] private _claimDistributors;  
+    address private _parentDistributor;  
+    uint256 constant private _parentSupply = 1000;
 
     // Standard across units.
-    uint256 constant initialSupply = 1000;
-    uint256 constant poolSupply = 10; // 1% to pool.
     uint256 constant maximumParentSize = 5;
-    uint256 constant parentSupply = 100; // 10% to parents. "tithe"
-    uint256 creatorSupply = initialSupply - poolSupply - parentSupply;
 
-    constructor(string memory name, string memory symbol, string memory publicHash_, string memory publicUrl_, 
+    constructor(string memory name, string memory symbol, string memory publicUrl_,
                 string memory creatorName_, address creatorAddress_, address poolAddress, 
-                address[] memory parentAddresses, address parentMerkleAddress) Ownable() ERC20(name, symbol) {       
+                string[] memory parentIDs_, address[] memory parentAddresses) 
+                Ownable() ERC20(name, symbol) ERC20Capped(10000 * 10**uint(decimals())) {       
         // The identifying information for this atom.
-        publicHash = publicHash_;
         publicUrl = publicUrl_;
         creatorName = creatorName_;
         creatorAddress = creatorAddress_;
-        numParents = uint8(parentAddresses.length);
+        parentIDs = parentIDs_;
+        knownParentAddresses = parentAddresses;
         _checkParents(parentAddresses);
-        _parentAddresses = parentAddresses;
 
         // Mint to the creator, the pool of which this is a part, and the parentMerkle for parents to claim. That might
-        // include dummy parents.
-        _mint(creatorAddress, creatorSupply);
-        _mint(poolAddress, poolSupply);
-        _mint(parentMerkleAddress, parentSupply);
-        _claimDistributors.push(parentMerkleAddress);
+        // include dummy parents and/or the general pool. If it's the general Science pool, we can move over from there
+        // to the actual parents when they come online.
+        uint256 poolSupply = 100;
+        uint256 creatorSupply = 10000 - poolSupply - _parentSupply;
+        ERC20._mint(creatorAddress, creatorSupply * 10**uint(decimals()));
+        ERC20._mint(poolAddress, poolSupply * 10**uint(decimals()));
     }
 
-    function _checkParents(address[] memory parentAddressses) private {
-        require(parentAddressses.length <= maximumParentSize, "|Parents| > maximum.");
-        for (uint i=0; i < parentAddressses.length; i++) {
-            require(address(this) != parentAddressses[i], "This unit's address was listed as a parent.");
-            require(creatorAddress != parentAddressses[i], "The creator address was listed as a parent.");            
+    function _checkParents(address[] memory parentAddresses) private {
+        require(parentAddresses.length <= maximumParentSize, "|Parents| > maximum.");
+        for (uint i=0; i < parentAddresses.length; i++) {
+            _checkValidAddress(parentAddresses[i]);
         }       
 
-        for (uint i=0; i < parentAddressses.length; i++) {
-            require(!_parentCheck[parentAddressses[i]], "Duplicate address over the full set of parents.");
-            _parentCheck[parentAddressses[i]] = true;
+        for (uint i=0; i < parentAddresses.length; i++) {
+            for (uint j=i+1; j < parentAddresses.length; j++) {
+                require(parentAddresses[i] != parentAddresses[j], "Duplicate address over the full set of parents.");
+            }
         }
     }
 
-    function getParents() public returns (address[] memory) {
-        return _parentAddresses;
+    function addParent(address parentAddress) public onlyOwner{
+        knownParentAddresses.push(parentAddress);
+        _checkParents(knownParentAddresses);
+    }
+
+    function getKnownParents() public returns (address[]) {
+        return _knownParentAddresses;
     }
 
     function getClaimDistributorAddresses() public returns (address[] memory) {
         return _claimDistributors;
     }
-    
-    function sendHoldingsToDistributor(address payable distributorAddress) public onlyOwner {
-        string memory failureString = append("Transfer from Unit to Distributor ", toAsciiString(distributorAddress));
-        require(_sendUSDCToDistributor(distributorAddress), append(failureString, " failed for USDC."));
-        require(_sendEthToDistributor(distributorAddress), append(failureString, " failed for ETH."));
-        _claimDistributors.push(distributorAddress);
+
+    function _checkValidAddress(address toCheck) private {
+        require(toCheck != address(0x0), "Cannot use the 0 address.");
+        require(toCheck != address(this), "Cannot use this address.");
+        require(toCheck != creatorAddress, "Cannot use the creator address.");
+    }
+
+    function sendToParents(address payable parentDistributor) public onlyOwner {
+        require(_parentDistributor == address(0), "Already minted to parents.");
+        _checkValidAddress(parentDistributor);
+        _mint(parentDistributor, _parentSupply * 10**uint(decimals()));
+        _parentDistributor = parentDistributor;
+        emit Distribution(parentDistributor, _parentSupply);
+    }
+
+    function setNewClaimDistributor(address payable ethDistributor) public onlyOwner {
+        // Check to see if we've already minted to parents.
+        require(_parentDistributor != address(0), "Parents have not yet received their mint.");
+        _checkValidAddress(ethDistributor);
+        _claimDistributors.push(ethDistributor);
+    }
+
+    function sendHoldingsToDistributor() public {
+        require(_claimDistributors.length > 0, "We do not have a distributor.");
+        const distributor = _claimDistributors[_claimDistributors.length - 1];
+        require(_sendEthToDistributor(distributor), "Sending holdings failed for ETH.");
     }
 
     function _sendEthToDistributor(address payable distributorAddress) private returns (bool) {
         uint256 balance = address(this).balance;
         (bool sent, bytes memory data) = distributorAddress.call{value: balance}("");
+        emit Distribution(distributorAddress, balance);
         return sent;
     }
 
@@ -126,27 +145,6 @@ contract UnitCoinV1 is Ownable, ERC20Burnable {
         uint256 balance = IERC20(tokenAddress).balanceOf(myAddress);
         bool sent = IERC20(tokenAddress).transfer(distributorAddress, balance);
         return sent;
-    }
-
-    function toAsciiString(address x) internal view returns (string memory) {
-        bytes memory s = new bytes(40);
-        for (uint i = 0; i < 20; i++) {
-            bytes1 b = bytes1(uint8(uint(uint160(x)) / (2**(8*(19 - i)))));
-            bytes1 hi = bytes1(uint8(b) / 16);
-            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
-            s[2*i] = char(hi);
-            s[2*i+1] = char(lo);            
-        }
-        return string(s);
-    }
-
-    function char(bytes1 b) internal pure returns (bytes1 c) {
-        if (uint8(b) < 10) return bytes1(uint8(b) + 0x30);
-        else return bytes1(uint8(b) + 0x57);
-    }    
-
-    function append(string memory a, string memory b) internal pure returns (string memory) {
-        return string(abi.encodePacked(a, b));
     }
 
     // See: https://ethereum.stackexchange.com/questions/67436/a-solidity-0-5-x-function-to-convert-adress-string-to-ethereum-address
