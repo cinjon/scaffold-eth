@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./IMerkleDistributor.sol";
 
 
 // *** Initialization ***
@@ -38,38 +38,45 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 //   knownParentAddresses: the known ethereum addresses for the parents. 
 //   parentMerkleAddress: the ethereum address of the creator.
 contract UnitCoinV1 is Ownable, ERC20Capped {
-    event Distribution(address distributoAddress, uint256 balance);
+    event Distribution(address distributorAddress, uint256 balance);
 
     // Identifyng info.
     string public publicUrl;
     address public creatorAddress;
     string public creatorName;
-    string[] public parentIDs;
-    address[] public knownParentAddresses;
+    string[] private _parentIDs;
+    address[] private _knownParentAddresses;
     address[] private _claimDistributors;  
     address private _parentDistributor;  
-    uint256 constant private _parentSupply = 1000;
 
     // Standard across units.
     uint256 constant maximumParentSize = 5;
 
     constructor(string memory name, string memory symbol, string memory publicUrl_,
                 string memory creatorName_, address creatorAddress_, address poolAddress, 
-                string[] memory parentIDs_, address[] memory parentAddresses) 
+                string[] memory parentIDs, address[] memory parentAddresses, address parentMerkleAddress) 
                 Ownable() ERC20(name, symbol) ERC20Capped(10000 * 10**uint(decimals())) {       
-        // The identifying information for this atom.
+        // The identifying information.
         publicUrl = publicUrl_;
         creatorName = creatorName_;
         creatorAddress = creatorAddress_;
-        parentIDs = parentIDs_;
-        knownParentAddresses = parentAddresses;
-        _checkParents(parentAddresses);
+
+        require(creatorAddress != poolAddress, "Creator should not be the same as the pool.");
+        require(creatorAddress != parentMerkleAddress, "Creator should not be the same as the parent merkle.");
+        require(poolAddress != parentMerkleAddress, "Pool should not be the same as the parent merkle.");
+        require(IMerkleDistributor(parentMerkleAddress).setTokenOnce(address(this)), "Failed to set merkle address.");
+
+        _parentIDs = parentIDs;
+        _knownParentAddresses = parentAddresses;
+        _checkParents(_knownParentAddresses);
 
         // Mint to the creator, the pool of which this is a part, and the parentMerkle for parents to claim. That might
         // include dummy parents and/or the general pool. If it's the general Science pool, we can move over from there
         // to the actual parents when they come online.
         uint256 poolSupply = 100;
-        uint256 creatorSupply = 10000 - poolSupply - _parentSupply;
+        uint256 parentSupply = 1000;
+        uint256 creatorSupply = 8900;
+        ERC20._mint(parentMerkleAddress, parentSupply * 10**uint(decimals()));
         ERC20._mint(creatorAddress, creatorSupply * 10**uint(decimals()));
         ERC20._mint(poolAddress, poolSupply * 10**uint(decimals()));
     }
@@ -87,13 +94,18 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         }
     }
 
-    function addParent(address parentAddress) public onlyOwner{
-        knownParentAddresses.push(parentAddress);
-        _checkParents(knownParentAddresses);
+    function addParent(address parentAddress) public onlyOwner {        
+        require(_knownParentAddresses.length + 1 <= maximumParentSize);
+        _knownParentAddresses.push(parentAddress);
+        _checkParents(_knownParentAddresses);
+    }
+    
+    function getKnownParentAddresses() external view returns (address[] memory) {
+        return _knownParentAddresses;
     }
 
-    function getKnownParents() public returns (address[]) {
-        return _knownParentAddresses;
+    function getParentIDs() external view returns (string[] memory) {
+        return _parentIDs;
     }
 
     function getClaimDistributorAddresses() public returns (address[] memory) {
@@ -106,24 +118,14 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         require(toCheck != creatorAddress, "Cannot use the creator address.");
     }
 
-    function sendToParents(address payable parentDistributor) public onlyOwner {
-        require(_parentDistributor == address(0), "Already minted to parents.");
-        _checkValidAddress(parentDistributor);
-        _mint(parentDistributor, _parentSupply * 10**uint(decimals()));
-        _parentDistributor = parentDistributor;
-        emit Distribution(parentDistributor, _parentSupply);
-    }
-
     function setNewClaimDistributor(address payable ethDistributor) public onlyOwner {
-        // Check to see if we've already minted to parents.
-        require(_parentDistributor != address(0), "Parents have not yet received their mint.");
         _checkValidAddress(ethDistributor);
         _claimDistributors.push(ethDistributor);
     }
 
     function sendHoldingsToDistributor() public {
         require(_claimDistributors.length > 0, "We do not have a distributor.");
-        const distributor = _claimDistributors[_claimDistributors.length - 1];
+        address payable distributor = payable(_claimDistributors[_claimDistributors.length - 1]);
         require(_sendEthToDistributor(distributor), "Sending holdings failed for ETH.");
     }
 
@@ -131,19 +133,6 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         uint256 balance = address(this).balance;
         (bool sent, bytes memory data) = distributorAddress.call{value: balance}("");
         emit Distribution(distributorAddress, balance);
-        return sent;
-    }
-
-    function _sendUSDCToDistributor(address payable distributorAddress) private returns (bool) {
-        string memory usdcString = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";        
-        address usdcAddress = parseAddressFromString(usdcString);
-        return _sendTokenToDistributor(usdcAddress, distributorAddress);
-    }
-
-    function _sendTokenToDistributor(address tokenAddress, address payable distributorAddress) private returns (bool) {
-        address myAddress = address(this);
-        uint256 balance = IERC20(tokenAddress).balanceOf(myAddress);
-        bool sent = IERC20(tokenAddress).transfer(distributorAddress, balance);
         return sent;
     }
 

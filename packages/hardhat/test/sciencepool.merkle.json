@@ -1,0 +1,4 @@
+yarn run v1.22.5
+$ ts-node scripts/generate-merkle-root.ts --input ../audius-claim-distribution/merkleroots/sciencepool.json
+{"merkleRoot":"0x3f884a605dab55f926db10d6c94cee3e6717f6d9df013ae4716da0113b8ded24","tokenTotal":"0x3635c9adc5dea00000","claims":{"0x5FbDB2315678afecb367f032d93F642f64180aa3":{"index":0,"amount":"0x3635c9adc5dea00000","proof":[]}}}
+Done in 1.95s.

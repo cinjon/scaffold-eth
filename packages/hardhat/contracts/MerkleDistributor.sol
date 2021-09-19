@@ -8,7 +8,7 @@ import "./IMerkleDistributor.sol";
 import "hardhat/console.sol";
 
 contract MerkleDistributor is IMerkleDistributor {
-    address public immutable override token;
+    address public override token;
     bytes32 public immutable override merkleRoot;
 
     // This is a packed array of booleans.
@@ -17,6 +17,13 @@ contract MerkleDistributor is IMerkleDistributor {
     constructor(address token_, bytes32 merkleRoot_) public {
         token = token_;
         merkleRoot = merkleRoot_;
+    }
+
+    function setTokenOnce(address token_) external override returns (bool) {
+        require(token == address(0x0), "Token has already been set.");
+        require(token_ != address(0x0), "Target token should not be zero address.");
+        token = token_;
+        return true;
     }
 
     function isClaimed(uint256 index) public view override returns (bool) {
@@ -42,12 +49,7 @@ contract MerkleDistributor is IMerkleDistributor {
 
         // Mark it claimed and send the token.
         _setClaimed(index);
-        console.log('hi token: ');
-        console.log(token);
-        console.log(account);
-        console.log(amount);
         require(IERC20(token).transfer(account, amount), 'MerkleDistributor: Transfer failed.');
-
         emit Claimed(index, account, amount);
     }
 }
