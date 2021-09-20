@@ -1,15 +1,26 @@
-const { utils } = require("ethers");
-const fs = require("fs");
-const chalk = require("chalk");
+import {BigNumber, utils} from "ethers";
+import fs from "fs";
 
-require("@nomiclabs/hardhat-waffle");
-require("@tenderly/hardhat-tenderly");
+import {task} from "hardhat/config";
+import "@nomiclabs/hardhat-waffle";
+import "@tenderly/hardhat-tenderly";
+import "hardhat-deploy";
+import "@eth-optimism/hardhat-ovm";
+import "@nomiclabs/hardhat-ethers";
+import "hardhat-interface-generator";
 
-require("hardhat-deploy");
+// const { utils } = require("ethers");
+// const fs = require("fs");
+// const chalk = require("chalk");
 
-require("@eth-optimism/hardhat-ovm");
-require("@nomiclabs/hardhat-ethers");
-require("hardhat-interface-generator");
+// require("@nomiclabs/hardhat-waffle");
+// require("@tenderly/hardhat-tenderly");
+
+// require("hardhat-deploy");
+
+// require("@eth-optimism/hardhat-ovm");
+// require("@nomiclabs/hardhat-ethers");
+// require("hardhat-interface-generator");
 
 const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 
@@ -40,7 +51,8 @@ function mnemonic() {
   return "";
 }
 
-module.exports = {
+
+const config = {
   defaultNetwork,
 
   // don't forget to set your provider like:
@@ -267,10 +279,11 @@ module.exports = {
     },
   },
 };
+export default config;
 
 const DEBUG = false;
 
-function debug(text) {
+function debug(text: string) {
   if (DEBUG) {
     console.log(text);
   }
@@ -312,7 +325,7 @@ task("fundedwallet", "Create a wallet (pk) link and fund it with deployer?")
     //SEND USING LOCAL DEPLOYER MNEMONIC IF THERE IS ONE
     // IF NOT SEND USING LOCAL HARDHAT NODE:
     if (localDeployerMnemonic) {
-      let deployerWallet = new ethers.Wallet.fromMnemonic(
+      let deployerWallet = ethers.Wallet.fromMnemonic(
         localDeployerMnemonic
       );
       deployerWallet = deployerWallet.connect(ethers.provider);
@@ -425,10 +438,10 @@ task(
         address +
         " and set as mnemonic in packages/hardhat"
     );
-    console.log(
-      "📜 This will create the first contract: " +
-        chalk.magenta("0x" + contract_address)
-    );
+    // console.log(
+    //   "📜 This will create the first contract: " +
+    //     chalk.magenta("0x" + contract_address)
+    // );
     console.log(
       "💬 Use 'yarn run account' to get more information about the deployment account."
     );
@@ -545,6 +558,12 @@ task("send", "Send ETH")
       debug(`Normalized to address: ${to}`);
     }
 
+    let gasPrice:BigNumber = parseUnits(
+      taskArgs.gasPrice ? taskArgs.gasPrice : "1.001",
+      "gwei"
+    );//.toHexString();
+    let gasPriceGwei:BigNumber = gasPrice.div(1000000000);
+
     const txRequest = {
       from: await fromSigner.getAddress(),
       to,
@@ -553,19 +572,17 @@ task("send", "Send ETH")
         "ether"
       ).toHexString(),
       nonce: await fromSigner.getTransactionCount(),
-      gasPrice: parseUnits(
-        taskArgs.gasPrice ? taskArgs.gasPrice : "1.001",
-        "gwei"
-      ).toHexString(),
+      gasPrice: gasPrice.toHexString(),
       gasLimit: taskArgs.gasLimit ? taskArgs.gasLimit : 24000,
       chainId: network.config.chainId,
+      data: undefined
     };
 
     if (taskArgs.data !== undefined) {
-      txRequest.data = taskArgs.data;
+      txRequest['data'] = taskArgs.data;
       debug(`Adding data to payload: ${txRequest.data}`);
     }
-    debug(txRequest.gasPrice / 1000000000 + " gwei");
+    debug(gasPriceGwei.toString() + " gwei");
     debug(JSON.stringify(txRequest, null, 2));
 
     return send(fromSigner, txRequest);

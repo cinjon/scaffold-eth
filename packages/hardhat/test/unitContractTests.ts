@@ -1,7 +1,14 @@
-const { ethers, getNamedAccounts } = require("hardhat");
-const { use, expect } = require("chai");
-const { solidity } = require("ethereum-waffle");
-const { BigNumber } = require("ethers");
+import {deployments, ethers, getNamedAccounts} from "hardhat";
+import { use, expect} from "chai";
+import { waffleChai } from "@ethereum-waffle/chai";
+import {solidity} from "ethereum-waffle";
+import { BigNumber } from "ethers";
+import AllocationTree from "../contracts/balance-tree";
+
+// const { ethers, getNamedAccounts } = require("hardhat");
+// const { use, expect } = require("chai");
+// const { solidity } = require("ethereum-waffle");
+// const { BigNumber } = require("ethers");
 // const AllocationTree = require("../contracts/balance-tree");
 
 use(solidity);
@@ -25,10 +32,11 @@ const deployProxyFactory = async (
 };
 
 describe("Unit Contracts", function () {    
-    let scienceContract, mlcContract, u0ParentMerkle;
+    let scienceContract, mlcContract, u0ParentMerkle, u1ParentMerkle, u2ParentMerkle, u3ParentMerkle, u4ParentMerkle;
     let fakeWETH, deployer, creator0, creator1, creator2, creator3, creator4, creator5, creatorAddresses, signingAccounts;
     let u0, u1, u2, u3, u4;
     let transfer;
+    let tree, proxy, callableProxy;
     let UnitFactory, MerkleFactory;
     const zeroAddress = "0x0000000000000000000000000000000000000000";
 
@@ -44,10 +52,9 @@ describe("Unit Contracts", function () {
             creator4 = accounts['creator4'];
             creator5 = accounts['creator5'];
             creatorAddresses = [creator0, creator1, creator2, creator3, creator4, creator5];
-            console.log('singers');
             const signers = await ethers.getSigners();
             fakeWETH = signers[1];
-            signingAccounts = signers.then(signers => signers.filter(account => creatorAddresses.indexOf(account.address) > -1));            
+            signingAccounts = signers.filter(account => creatorAddresses.indexOf(account.address) > -1);
             // { frontend, admin, allPool, creator0, creator1, creator2, creator3, creator4, creator5, creator6, creator7, deployer } = await getNamedAccounts();
         })
 
@@ -136,6 +143,9 @@ describe("Unit Contracts", function () {
             const expected2 = BigNumber.from("1100000000000000000000");
             expect(await u0.balanceOf(scienceContract.address)).to.equal(expected2);
             expect(await u0.balanceOf(u0ParentMerkle.address)).to.equal(0);
+
+            // Sneak this in here...
+            await u1ParentMerkle.claim(0, scienceContract.address, "0x3635c9adc5dea00000", []);            
         });
 
         it("Should mint paper with parents and 1 missing.", async function() {
@@ -156,7 +166,7 @@ describe("Unit Contracts", function () {
             // Total: 1000             
             // We push up 1.8 to 2 and 466.2 to 466 in order to make the numbers whole.           
 
-            const u3MerkleRoot = "0xe0e6b85b0d8d0d2c7f3de3c94ce9a4e7be1cd6c2bdd477fa11cde51cac0e1c60";g
+            const u3MerkleRoot = "0xe0e6b85b0d8d0d2c7f3de3c94ce9a4e7be1cd6c2bdd477fa11cde51cac0e1c60";
             u3ParentMerkle = await MerkleFactory.deploy(zeroAddress, u3MerkleRoot);
             expect(await u3ParentMerkle.token()).to.equal(zeroAddress);
             u3 = await UnitFactory.deploy(
