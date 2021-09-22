@@ -48,16 +48,17 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
     string public publicUrl;
     address public creatorAddress;
     string public creatorName;
+    address public poolAddress;
     string[] private _parentIDs;
     address[] private _knownParentAddresses;
-    address[] private _claimDistributors;  
+    // address[] private _claimDistributors;  
     address private _parentDistributor;  
 
     // Standard across units.
     uint256 constant maximumParentSize = 5;
 
     constructor(string memory name, string memory symbol, string memory publicUrl_,
-                string memory creatorName_, address creatorAddress_, address poolAddress, address sciencePool,
+                string memory creatorName_, address creatorAddress_, address poolAddress_, address sciencePool,
                 string[] memory parentIDs, address[] memory parentAddresses, address parentMerkleAddress) 
                 Ownable() ERC20Capped(10000 * 10**uint(decimals())) ERC20(name, symbol) {       
         // TODO: Make the sciencePool address constant when we know it.
@@ -69,6 +70,7 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         publicUrl = publicUrl_;
         creatorName = creatorName_;
         creatorAddress = creatorAddress_;
+        poolAddress = poolAddress_;
         _parentIDs = parentIDs;
         _knownParentAddresses = parentAddresses;
         _checkParents(_knownParentAddresses);
@@ -92,7 +94,7 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         ERC20._mint(poolAddress, poolSupply * 10**uint(decimals()));
     }
 
-    function _checkParents(address[] memory parentAddresses) private {
+    function _checkParents(address[] memory parentAddresses) view private {
         require(parentAddresses.length <= maximumParentSize, "|Parents| > maximum.");
         for (uint i=0; i < parentAddresses.length; i++) {
             _checkValidAddress(parentAddresses[i]);
@@ -105,9 +107,12 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         }
     }
 
-    function addParent(address parentAddress) public onlyOwner {        
-        require(_knownParentAddresses.length + 1 <= maximumParentSize);
-        _knownParentAddresses.push(parentAddress);
+    function addParents(address[] memory parentAddresses) public onlyOwner {        
+        require(_knownParentAddresses.length + parentAddresses.length <= maximumParentSize, 
+                "We are trying to add too many parents.");
+        for (uint i=0; i<parentAddresses.length; i++) {
+            _knownParentAddresses.push(parentAddresses[i]);
+        }
         _checkParents(_knownParentAddresses);
     }
     
@@ -119,9 +124,9 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         return _parentIDs;
     }
 
-    function getClaimDistributorAddresses() view public returns (address[] memory) {
-        return _claimDistributors;
-    }
+    // function getClaimDistributorAddresses() view public returns (address[] memory) {
+    //     return _claimDistributors;
+    // }
 
     function _checkValidAddress(address toCheck) view private {
         require(toCheck != address(0x0), "Cannot use the 0 address.");
@@ -129,28 +134,39 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         require(toCheck != creatorAddress, "Cannot use the creator address.");
     }
 
-    function setNewClaimDistributor(address payable ethDistributor) public onlyOwner {<
-        _checkValidAddress(ethDistributor);
-        _claimDistributors.push(ethDistributor);
-    }
+    // function setNewClaimDistributor(address payable ethDistributor) public onlyOwner {
+    //     // ethDistributor is likely a SplitProxy.
+    //     _checkValidAddress(ethDistributor);
+    //     _claimDistributors.push(ethDistributor);
+    // }
 
-    function sendHoldingsToDistributor() public {
-        require(_claimDistributors.length > 0, "We do not have a distributor.");
-        address payable distributor = payable(_claimDistributors[_claimDistributors.length - 1]);
-        require(_sendEthToDistributor(distributor), "Sending holdings failed for ETH.");
-        // TODO: Should this then call the incrementWindow...?
-    }
+    // function sendHoldingsToDistributor() public {
+    //     require(_claimDistributors.length > 0, "We do not have a distributor.");
+    //     address payable distributor = payable(_claimDistributors[_claimDistributors.length - 1]);
+    //     require(_sendEthToDistributor(distributor), "Sending holdings failed for ETH.");
+    //     try 
+    //     // TODO: Should this then call the incrementWindow...?
+    // }
     
-    function _sendEthToDistributor(address payable distributorAddress) private returns (bool) {
-        uint256 balance = address(this).balance;
-        (bool sent, bytes memory data) = distributorAddress.call{value: balance}("");
-        emit Distribution(distributorAddress, balance);
-        return sent;
-    }
+    // function _sendEthToDistributor(address payable distributorAddress) private returns (bool) {
+    //     uint256 balance = address(this).balance;
+    //     (bool sent, bytes memory data) = distributorAddress.call{value: balance}("");
+    //     emit Distribution(distributorAddress, balance);
+    //     return sent;
+    // }
+
+    function _redirectPayment() private {
+        // Eth sent here is passed on to the owning pool.
+        (bool sent, bytes memory data) = poolAddress.call{value: msg.value}("");
+        require(sent, "Please do not send eth here; give to the splitter of record.");
+    }    
 
     // Function to receive Ether. msg.data must be empty
-    receive() external payable {}
-
-    // Fallback function is called when msg.data is not empty
-    fallback() external payable {}
+    fallback() external payable {
+        _redirectPayment();
+    }    
+    
+    receive() external payable {
+        _redirectPayment();
+    }
 }

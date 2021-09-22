@@ -11,4 +11,8 @@ contract PoolCoin is Ownable, ERC20 {
     constructor(string memory name, string memory symbol) Ownable() ERC20(name, symbol) {
         _mint(msg.sender, 1000);
     }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 }

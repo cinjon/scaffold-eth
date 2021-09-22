@@ -203,7 +203,7 @@ describe("Unit Contracts", function () {
             expect(await u3.balanceOf(u3ParentMerkle.address)).to.equal(expected5);
         })
 
-        it("Should not be able to mint a token with no parent address.", async function() {
+        it("Should not be able to mint a token with no parentMerkle address.", async function() {
             await expect(UnitFactory.deploy(
                 "Unit4", "U4", "url4", "creator4", creator4, scienceContract.address, scienceContract.address, ["url0", "url1"], [u0.address, u1.address], zeroAddress
             )).to.be.reverted; 
@@ -239,7 +239,7 @@ describe("Unit Contracts", function () {
             let knownParents = await u3.getKnownParentAddresses();
             expect(knownParents[0]).to.equal(u0.address)
             expect(knownParents[1]).to.equal(u1.address)
-            await u3.addParent(u4.address)
+            await u3.addParents([u4.address]);
             knownParents = await u3.getKnownParentAddresses();
             expect(knownParents[0]).to.equal(u0.address)
             expect(knownParents[1]).to.equal(u1.address)
@@ -263,7 +263,6 @@ describe("Unit Contracts", function () {
                   allocation: BigNumber.from(percentage * 10**9),
                 };
               });
-            // console.log(allocations);
       
             tree = new AllocationTree(allocations);
             const rootHash = tree.getHexRoot();
@@ -276,11 +275,6 @@ describe("Unit Contracts", function () {
             );            
 
             const deployTx = await proxyFactory.createSplit(rootHash);
-            // const deployTx = await proxyFactory
-            //     .connect(deployer)
-            //     .createSplit(rootHash);
-
-            console.log('deployTx')
 
             // Compute address.
             const constructorArgs = ethers.utils.defaultAbiCoder.encode(
@@ -305,13 +299,17 @@ describe("Unit Contracts", function () {
             ).deployed();            
         })
 
-        it("Should have funder1 give 1 eth to u1", async function() {
-            await fundingAccounts[0].sendTransaction({
+        it("Should have funder1 give 1 eth to u1 and have it go to the mlc pool", async function() {
+            console.log('yo mlc');
+            console.log(await ethers.provider.getBalance(mlcContract.address));
+            const sendTrans = await fundingAccounts[0].sendTransaction({
                 to: u1.address,
                 value: ethers.utils.parseEther("1"),
               });
-            
-            // await callableProxy.incrementWindow();
+            console.log(sendTrans);
+            console.log(await ethers.provider.getBalance(mlcContract.address));
+            expect(await ethers.provider.getBalance(mlcContract.address)).to.equal(BigNumber.from("1000000000000000000"));
+            expect(await ethers.provider.getBalance(proxy.address)).to.equal(BigNumber.from("0"));
         })
 
         it("Should have funder1 give 5 eth to the proxy", async function() {
@@ -328,8 +326,8 @@ describe("Unit Contracts", function () {
             console.log('hi4')
             const balanceWindowAfter = await callableProxy.balanceForWindow(0);
             console.log(balanceWindowAfter);
-            const balanceWindowAfter1 = await callableProxy.balanceForWindow(1);
-            console.log(balanceWindowAfter1);
+            // const balanceWindowAfter1 = await callableProxy.balanceForWindow(1);
+            // console.log(balanceWindowAfter1);
         })
 
         // it("Should send held balance from u0 to the last splits contract.", async function() {
