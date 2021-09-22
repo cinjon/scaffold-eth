@@ -12,18 +12,22 @@ import "./IMerkleDistributor.sol";
 // *** Initialization ***
 // The unit U is minted by creator C and has an associated pool P and parents S. C immediately receives the vast 
 // allotment minted to their address. P receives a small amount minted to their address. S receives the mint but to a
-// Merkle that they need to claim. S may consist of a dummy paper.
+// Merkle that they need to claim. If there are no parents yet, S may be minted to the Science pool, which is governed 
+// by the foundation. When the parents come on board, those coins will then be transferred over.
+
 // *** Payment sent to U ***
-// We've already committed payment to parents by giving to their tokens. So at this point, we just need to make an 
-// airdrop to all the holders. When that's triggered, we start another Merkle distributor and gift that distributor
-// these coins. 
+// We've already committed payment to parents by giving to their tokens. So when payments come in, we just need to make 
+// an airdrop to all the holders of the tokens owned by a Unit. We do that via Mirror Split contracts that allocate the
+// tokens in the form of windows. These need to be updated every so often to account for new holders. That scheme can be
+// instantiated later.
+
 // *** What happens to payments to unclaimed addresses? ***
-// The issue is what happens when someone hasn't claimed their U tokens yet. This happens when U becomes a parent to 
+// An issue is what happens when someone hasn't claimed their U tokens yet. This happens when U becomes a parent to 
 // another unit U1. In that case, the holders of U get U1 tokens airdropped to them. If one of those holders hasn't
 // claimed then, then shouldn't they still be allowed to get the payment? Yes, because they technically own this; they
 // just haven't gotten it yet due to inefficiencies in the system. 
-// To do this, we need to account for it in the Merkel distributor. So we need to keep track of the historical claims
-// as well and be able to ping whether a user has claimed.
+// To do this, we need to account for it in the Merkel/Splits distributors. So we need to keep track of the historical 
+// claims as well and be able to ping whether a user has claimed.
 
 
 // This contract corresponds to a single unit. When instantiated, it holds a UnitCoin with this contract as the owner.
@@ -125,7 +129,7 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         require(toCheck != creatorAddress, "Cannot use the creator address.");
     }
 
-    function setNewClaimDistributor(address payable ethDistributor) public onlyOwner {
+    function setNewClaimDistributor(address payable ethDistributor) public onlyOwner {<
         _checkValidAddress(ethDistributor);
         _claimDistributors.push(ethDistributor);
     }
