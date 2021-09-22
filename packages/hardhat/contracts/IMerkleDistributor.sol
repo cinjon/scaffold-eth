@@ -12,7 +12,7 @@ interface IMerkleDistributor {
     // Claim the given amount of the token to the given address. Reverts if the inputs are invalid.
     function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof) external;
     // Sets the token for the Merkle Distributor. Won't set if already done.
-    function setTokenOnce(address token) external returns (bool);
+    function setTokenOnce(address token_) external returns (bool);
 
     // This event is triggered whenever a call to #claim succeeds.
     event Claimed(uint256 index, address account, uint256 amount);

@@ -4,6 +4,7 @@ import { waffleChai } from "@ethereum-waffle/chai";
 import {solidity} from "ethereum-waffle";
 import { BigNumber } from "ethers";
 import AllocationTree from "../contracts/balance-tree";
+import { sign } from "crypto";
 
 // const { ethers, getNamedAccounts } = require("hardhat");
 // const { use, expect } = require("chai");
@@ -31,13 +32,15 @@ const deployProxyFactory = async (
     return await proxyFactory.deployed();
 };
 
-describe("Unit Contracts", function () {    
+describe("Unit Contracts", function () {  
+    const scienceMerkle1000 = "0x3f884a605dab55f926db10d6c94cee3e6717f6d9df013ae4716da0113b8ded24";
     let scienceContract, mlcContract, u0ParentMerkle, u1ParentMerkle, u2ParentMerkle, u3ParentMerkle, u4ParentMerkle;
-    let fakeWETH, deployer, creator0, creator1, creator2, creator3, creator4, creator5, creatorAddresses, signingAccounts;
+    let fakeWETH, deployer, creator0, creator1, creator2, creator3, creator4, creator5, funder1;
+    let creatorAddresses, fundingAddresses, fundingAccounts, signingAccounts;
     let u0, u1, u2, u3, u4;
     let transfer;
-    let tree, proxy, callableProxy;
-    let UnitFactory, MerkleFactory;
+    let tree, proxy, callableProxy, proxyFactory;
+    let UnitFactory, MerkleFactory, SplitFactory;
     const zeroAddress = "0x0000000000000000000000000000000000000000";
 
     describe("Science", function() {
@@ -52,9 +55,12 @@ describe("Unit Contracts", function () {
             creator4 = accounts['creator4'];
             creator5 = accounts['creator5'];
             creatorAddresses = [creator0, creator1, creator2, creator3, creator4, creator5];
+            funder1 = accounts['funder1'];
+            fundingAddresses = [funder1];
             const signers = await ethers.getSigners();
             fakeWETH = signers[1];
             signingAccounts = signers.filter(account => creatorAddresses.indexOf(account.address) > -1);
+            fundingAccounts = signers.filter(account => fundingAddresses.indexOf(account.address) > -1);
             // { frontend, admin, allPool, creator0, creator1, creator2, creator3, creator4, creator5, creator6, creator7, deployer } = await getNamedAccounts();
         })
 
@@ -76,28 +82,29 @@ describe("Unit Contracts", function () {
             // console.log(mlcContract.address); // 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
           });
 
-        it("Should deploy Units u0, u1, and u2 with the merkle for the Science contract.", async function() {
+        it("Should deploy Units u0, u1, and u2 with the distribution just to the Science contract.", async function() {
             MerkleFactory = await ethers.getContractFactory("MerkleDistributor");
             UnitFactory = await ethers.getContractFactory("UnitCoinV1");
 
-            const scienceMerkle1000 = "0x3f884a605dab55f926db10d6c94cee3e6717f6d9df013ae4716da0113b8ded24";
-            u0ParentMerkle = await MerkleFactory.deploy(zeroAddress, scienceMerkle1000);
-            expect(await u0ParentMerkle.token()).to.equal(zeroAddress);
             u0 = await UnitFactory.deploy(
-                "Unit0", "U0", "url0", "creator0", creator0, scienceContract.address, ["ParentID1", "ParentID2", "ParentID3"], [], u0ParentMerkle.address
+                "Unit0", "U0", "url0", "creator0", creator0, scienceContract.address, scienceContract.address, 
+                ["ParentID1", "ParentID2", "ParentID3"], [], scienceContract.address
             )
-            expect(await u0ParentMerkle.token()).to.equal(u0.address);
-            const expected = BigNumber.from("1000000000000000000000");
-            expect(await u0.balanceOf(u0ParentMerkle.address)).to.equal(expected);            
+            const expected = BigNumber.from("1100000000000000000000");
+            expect(await u0.balanceOf(scienceContract.address)).to.equal(expected);            
 
-            u1ParentMerkle = await MerkleFactory.deploy(zeroAddress, scienceMerkle1000);
             u1 = await UnitFactory.deploy(
-                "Unit1", "U1", "url1", "creator1", creator1, scienceContract.address, ["ParentID1", "ParentID2", "ParentID3"], [], u1ParentMerkle.address
-            )                
+                "Unit1", "U1", "url1", "creator1", creator1, mlcContract.address, scienceContract.address,
+                ["ParentID1", "ParentID2", "ParentID3"], [], scienceContract.address
+            )
+            const expectedMLC = BigNumber.from("100000000000000000000");
+            expect(await u1.balanceOf(mlcContract.address)).to.equal(expectedMLC);            
+            const expectedScience = BigNumber.from("1000000000000000000000");
+            expect(await u1.balanceOf(scienceContract.address)).to.equal(expectedScience);            
 
-            u2ParentMerkle = await MerkleFactory.deploy(zeroAddress, scienceMerkle1000);
             u2 = await UnitFactory.deploy(
-                "Unit2", "U2", "url2", "creator2", creator2, scienceContract.address, ["ParentID1", "ParentID2", "ParentID3"], [], u2ParentMerkle.address
+                "Unit2", "U2", "url2", "creator2", creator2, scienceContract.address, scienceContract.address,
+                ["ParentID1", "ParentID2", "ParentID3"], [], scienceContract.address
             )
         });
 
@@ -128,25 +135,6 @@ describe("Unit Contracts", function () {
             expect(await u2.balanceOf(creator4)).to.equal(BigNumber.from("600000000000000000000"));
             expect(await u2.balanceOf(creator5)).to.equal(BigNumber.from("2420000000000000000000"));
         })
-        
-        it("Should not have u0 claimed yet for science pool (the parent).", async function() {
-            expect(await u0ParentMerkle.isClaimed(0)).to.equal(false);
-            const expected = BigNumber.from("100000000000000000000");
-            expect(await u0.balanceOf(scienceContract.address)).to.equal(expected);
-        });
-
-        it("Should be able to have science pool claim the parent share.", async function() {
-            expect(scienceContract.address).to.equals("0x5FbDB2315678afecb367f032d93F642f64180aa3");
-            const expected = BigNumber.from("1000000000000000000000");
-            expect(await u0.balanceOf(u0ParentMerkle.address)).to.equal(expected);
-            await u0ParentMerkle.claim(0, scienceContract.address, "0x3635c9adc5dea00000", []);
-            const expected2 = BigNumber.from("1100000000000000000000");
-            expect(await u0.balanceOf(scienceContract.address)).to.equal(expected2);
-            expect(await u0.balanceOf(u0ParentMerkle.address)).to.equal(0);
-
-            // Sneak this in here...
-            await u1ParentMerkle.claim(0, scienceContract.address, "0x3635c9adc5dea00000", []);            
-        });
 
         it("Should mint paper with parents and 1 missing.", async function() {
             // Of the 1000 parent coins, u0 gets 30%, u1 gets 60%, and u4 gets 10%. The u4 doesnt exist yet, so that 
@@ -170,13 +158,14 @@ describe("Unit Contracts", function () {
             u3ParentMerkle = await MerkleFactory.deploy(zeroAddress, u3MerkleRoot);
             expect(await u3ParentMerkle.token()).to.equal(zeroAddress);
             u3 = await UnitFactory.deploy(
-                "Unit3", "U3", "url3", "creator3", creator3, scienceContract.address, ["url0", "url1", "url4"], [u0.address, u1.address], u3ParentMerkle.address
+                "Unit3", "U3", "url3", "creator3", creator3, scienceContract.address, scienceContract.address, ["url0", "url1", "url4"], [u0.address, u1.address], u3ParentMerkle.address
             )  
             expect(await u3ParentMerkle.token()).to.equal(u3.address);
             const expected = BigNumber.from("1000000000000000000000");
             expect(await u3.balanceOf(u3ParentMerkle.address)).to.equal(expected);
             const knownParents = await u3.getKnownParentAddresses();
             const parentIDs = await u3.getParentIDs();
+
             // Can't seem to do lists below. Frustrating.
             expect(knownParents[0]).to.equal(u0.address)
             expect(knownParents[1]).to.equal(u1.address)
@@ -216,7 +205,7 @@ describe("Unit Contracts", function () {
 
         it("Should not be able to mint a token with no parent address.", async function() {
             await expect(UnitFactory.deploy(
-                "Unit4", "U4", "url4", "creator4", creator4, scienceContract.address, ["url0", "url1"], [u0.address, u1.address], zeroAddress
+                "Unit4", "U4", "url4", "creator4", creator4, scienceContract.address, scienceContract.address, ["url0", "url1"], [u0.address, u1.address], zeroAddress
             )).to.be.reverted; 
         });  
 
@@ -241,7 +230,7 @@ describe("Unit Contracts", function () {
             u4ParentMerkle = await MerkleFactory.deploy(zeroAddress, u4MerkleRoot);
             expect(await u4ParentMerkle.token()).to.equal(zeroAddress);            
             u4 = await UnitFactory.deploy(
-                "Unit4", "U4", "url4", "creator4", creator4, scienceContract.address, ["url0", "url1"], [u0.address, u1.address], u4ParentMerkle.address
+                "Unit4", "U4", "url4", "creator4", creator4, scienceContract.address, scienceContract.address, ["url0", "url1"], [u0.address, u1.address], u4ParentMerkle.address
             )  
             expect(await u4ParentMerkle.token()).to.equal(u4.address);
         });        
@@ -258,34 +247,40 @@ describe("Unit Contracts", function () {
         });               
 
         it("Should set up the first Splits contract on u1.", async function() {
-            expect(await u1.balanceOf(scienceContract.address)).to.equal(BigNumber.from("1100000000000000000000"));
+            expect(await u1.balanceOf(mlcContract.address)).to.equal(BigNumber.from("100000000000000000000"));
+            expect(await u1.balanceOf(scienceContract.address)).to.equal(BigNumber.from("1000000000000000000000"));
             expect(await u1.balanceOf(creator1)).to.equal(BigNumber.from("7770000000000000000000"));
             expect(await u1.balanceOf(creator2)).to.equal(BigNumber.from("30000000000000000000"));
             expect(await u1.balanceOf(creator3)).to.equal(BigNumber.from("100000000000000000000"));
             expect(await u1.balanceOf(creator4)).to.equal(BigNumber.from("600000000000000000000"));
             expect(await u1.balanceOf(creator5)).to.equal(BigNumber.from("400000000000000000000"));            
 
-            const claimers = [scienceContract.address, creator1, creator2, creator3, creator4, creator5];
-            const allocationPercentages = [0.11, 0.777, 0.003, 0.01, 0.06, 0.04]
+            const claimers = [mlcContract.address, scienceContract.address, creator1, creator2, creator3, creator4, creator5];
+            const allocationPercentages = [0.01, 0.10, 0.777, 0.003, 0.01, 0.06, 0.04]
             const allocations = allocationPercentages.map((percentage, index) => {
                 return {
                   account: claimers[index],
-                  allocation: BigNumber.from(percentage),
+                  allocation: BigNumber.from(percentage * 10**9),
                 };
               });
+            // console.log(allocations);
       
             tree = new AllocationTree(allocations);
             const rootHash = tree.getHexRoot();
     
             const splitter = await deploySplitter();
-            const proxyFactory = await deployProxyFactory(
+            SplitFactory = await ethers.getContractFactory("SplitFactory");
+            proxyFactory = await SplitFactory.deploy(
                 splitter.address,
                 fakeWETH.address
-            );
-    
-            const deployTx = await proxyFactory
-                .connect(deployer)
-                .createSplit(rootHash);
+            );            
+
+            const deployTx = await proxyFactory.createSplit(rootHash);
+            // const deployTx = await proxyFactory
+            //     .connect(deployer)
+            //     .createSplit(rootHash);
+
+            console.log('deployTx')
 
             // Compute address.
             const constructorArgs = ethers.utils.defaultAbiCoder.encode(
@@ -295,6 +290,7 @@ describe("Unit Contracts", function () {
             const salt = ethers.utils.keccak256(constructorArgs);
             const proxyBytecode = (await ethers.getContractFactory("SplitProxy")).bytecode;
             const codeHash = ethers.utils.keccak256(proxyBytecode);
+
             const proxyAddress = await ethers.utils.getCreate2Address(
                 proxyFactory.address,
                 salt,
@@ -307,7 +303,33 @@ describe("Unit Contracts", function () {
             callableProxy = await (
                 await ethers.getContractAt("Splitter", proxy.address)
             ).deployed();            
+        })
 
+        it("Should have funder1 give 1 eth to u1", async function() {
+            await fundingAccounts[0].sendTransaction({
+                to: u1.address,
+                value: ethers.utils.parseEther("1"),
+              });
+            
+            // await callableProxy.incrementWindow();
+        })
+
+        it("Should have funder1 give 5 eth to the proxy", async function() {
+            console.log('hii')
+            await fundingAccounts[0].sendTransaction({
+                to: proxy.address,
+                value: ethers.utils.parseEther("5"),
+              });
+
+            console.log('hii2')
+            expect(await ethers.provider.getBalance(proxy.address)).to.equal(BigNumber.from("5000000000000000000"));
+            console.log('hii3')
+            await callableProxy.incrementWindow();
+            console.log('hi4')
+            const balanceWindowAfter = await callableProxy.balanceForWindow(0);
+            console.log(balanceWindowAfter);
+            const balanceWindowAfter1 = await callableProxy.balanceForWindow(1);
+            console.log(balanceWindowAfter1);
         })
 
         // it("Should send held balance from u0 to the last splits contract.", async function() {

@@ -53,30 +53,37 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
     uint256 constant maximumParentSize = 5;
 
     constructor(string memory name, string memory symbol, string memory publicUrl_,
-                string memory creatorName_, address creatorAddress_, address poolAddress, 
+                string memory creatorName_, address creatorAddress_, address poolAddress, address sciencePool,
                 string[] memory parentIDs, address[] memory parentAddresses, address parentMerkleAddress) 
-                Ownable() ERC20(name, symbol) ERC20Capped(10000 * 10**uint(decimals())) {       
+                Ownable() ERC20Capped(10000 * 10**uint(decimals())) ERC20(name, symbol) {       
+        // TODO: Make the sciencePool address constant when we know it.
+        uint256 poolSupply = 100;
+        uint256 parentSupply = 1000;
+        uint256 creatorSupply = 8900;
+
         // The identifying information.
         publicUrl = publicUrl_;
         creatorName = creatorName_;
         creatorAddress = creatorAddress_;
-
-        require(creatorAddress != poolAddress, "Creator should not be the same as the pool.");
-        require(creatorAddress != parentMerkleAddress, "Creator should not be the same as the parent merkle.");
-        require(poolAddress != parentMerkleAddress, "Pool should not be the same as the parent merkle.");
-        require(IMerkleDistributor(parentMerkleAddress).setTokenOnce(address(this)), "Failed to set merkle address.");
-
         _parentIDs = parentIDs;
         _knownParentAddresses = parentAddresses;
         _checkParents(_knownParentAddresses);
 
+        require(creatorAddress != poolAddress, "Creator should not be the same as the pool.");
+        require(creatorAddress != parentMerkleAddress, "Creator should not be the same as the parent merkle.");
+        // Check if the parents are just being minted to science pool for all the parents to claim. If so, then don't
+        // force there to be a merkle deploy, etc. Instead, just mint more to the science pool and it will later send to
+        // the right parents when they come online.
+        if (parentMerkleAddress == sciencePool) {
+            ERC20._mint(parentMerkleAddress, parentSupply * 10**uint(decimals()));
+        } else {
+            require(IMerkleDistributor(parentMerkleAddress).setTokenOnce(address(this)), "Failed to set merkle address.");
+            ERC20._mint(parentMerkleAddress, parentSupply * 10**uint(decimals()));
+        }
+
         // Mint to the creator, the pool of which this is a part, and the parentMerkle for parents to claim. That might
         // include dummy parents and/or the general pool. If it's the general Science pool, we can move over from there
         // to the actual parents when they come online.
-        uint256 poolSupply = 100;
-        uint256 parentSupply = 1000;
-        uint256 creatorSupply = 8900;
-        ERC20._mint(parentMerkleAddress, parentSupply * 10**uint(decimals()));
         ERC20._mint(creatorAddress, creatorSupply * 10**uint(decimals()));
         ERC20._mint(poolAddress, poolSupply * 10**uint(decimals()));
     }
@@ -108,11 +115,11 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         return _parentIDs;
     }
 
-    function getClaimDistributorAddresses() public returns (address[] memory) {
+    function getClaimDistributorAddresses() view public returns (address[] memory) {
         return _claimDistributors;
     }
 
-    function _checkValidAddress(address toCheck) private {
+    function _checkValidAddress(address toCheck) view private {
         require(toCheck != address(0x0), "Cannot use the 0 address.");
         require(toCheck != address(this), "Cannot use this address.");
         require(toCheck != creatorAddress, "Cannot use the creator address.");
@@ -127,8 +134,9 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         require(_claimDistributors.length > 0, "We do not have a distributor.");
         address payable distributor = payable(_claimDistributors[_claimDistributors.length - 1]);
         require(_sendEthToDistributor(distributor), "Sending holdings failed for ETH.");
+        // TODO: Should this then call the incrementWindow...?
     }
-
+    
     function _sendEthToDistributor(address payable distributorAddress) private returns (bool) {
         uint256 balance = address(this).balance;
         (bool sent, bytes memory data) = distributorAddress.call{value: balance}("");
@@ -136,32 +144,9 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         return sent;
     }
 
-    // See: https://ethereum.stackexchange.com/questions/67436/a-solidity-0-5-x-function-to-convert-adress-string-to-ethereum-address
-    function parseAddressFromString(string memory _a) internal pure returns (address _parsedAddress) {
-        bytes memory tmp = bytes(_a);
-        uint160 iaddr = 0;
-        uint160 b1;
-        uint160 b2;
-        for (uint i = 2; i < 2 + 2 * 20; i += 2) {
-            iaddr *= 256;
-            b1 = uint160(uint8(tmp[i]));
-            b2 = uint160(uint8(tmp[i + 1]));
-            if ((b1 >= 97) && (b1 <= 102)) {
-                b1 -= 87;
-            } else if ((b1 >= 65) && (b1 <= 70)) {
-                b1 -= 55;
-            } else if ((b1 >= 48) && (b1 <= 57)) {
-                b1 -= 48;
-            }
-            if ((b2 >= 97) && (b2 <= 102)) {
-                b2 -= 87;
-            } else if ((b2 >= 65) && (b2 <= 70)) {
-                b2 -= 55;
-            } else if ((b2 >= 48) && (b2 <= 57)) {
-                b2 -= 48;
-            }
-            iaddr += (b1 * 16 + b2);
-        }
-        return address(iaddr);
-    }
+    // Function to receive Ether. msg.data must be empty
+    receive() external payable {}
+
+    // Fallback function is called when msg.data is not empty
+    fallback() external payable {}
 }

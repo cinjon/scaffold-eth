@@ -277,6 +277,9 @@ const config = {
     creator7: {
       default: 10,
     },
+    funder1: {
+      default: 11
+    }
   },
 };
 export default config;
