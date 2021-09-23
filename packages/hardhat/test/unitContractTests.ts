@@ -41,6 +41,7 @@ describe("Unit Contracts", function () {
     let transfer;
     let tree, proxy, callableProxy, proxyFactory;
     let UnitFactory, MerkleFactory, SplitFactory;
+    let claimers, allocationPercentages;
     const zeroAddress = "0x0000000000000000000000000000000000000000";
 
     describe("Science", function() {
@@ -255,12 +256,12 @@ describe("Unit Contracts", function () {
             expect(await u1.balanceOf(creator4)).to.equal(BigNumber.from("600000000000000000000"));
             expect(await u1.balanceOf(creator5)).to.equal(BigNumber.from("400000000000000000000"));            
 
-            const claimers = [mlcContract.address, scienceContract.address, creator1, creator2, creator3, creator4, creator5];
-            const allocationPercentages = [0.01, 0.10, 0.777, 0.003, 0.01, 0.06, 0.04]
+            claimers = [mlcContract.address, scienceContract.address, creator1, creator2, creator3, creator4, creator5];
+            allocationPercentages = [0.01, 0.10, 0.777, 0.003, 0.01, 0.06, 0.04]
             const allocations = allocationPercentages.map((percentage, index) => {
                 return {
                   account: claimers[index],
-                  allocation: BigNumber.from(percentage * 10**9),
+                  allocation: BigNumber.from(percentage * 10**8)
                 };
               });
       
@@ -300,39 +301,43 @@ describe("Unit Contracts", function () {
         })
 
         it("Should have funder1 give 1 eth to u1 and have it go to the mlc pool", async function() {
-            console.log('yo mlc');
-            console.log(await ethers.provider.getBalance(mlcContract.address));
             const sendTrans = await fundingAccounts[0].sendTransaction({
                 to: u1.address,
                 value: ethers.utils.parseEther("1"),
               });
-            console.log(sendTrans);
-            console.log(await ethers.provider.getBalance(mlcContract.address));
             expect(await ethers.provider.getBalance(mlcContract.address)).to.equal(BigNumber.from("1000000000000000000"));
             expect(await ethers.provider.getBalance(proxy.address)).to.equal(BigNumber.from("0"));
         })
 
         it("Should have funder1 give 5 eth to the proxy", async function() {
-            console.log('hii')
             await fundingAccounts[0].sendTransaction({
                 to: proxy.address,
                 value: ethers.utils.parseEther("5"),
               });
 
-            console.log('hii2')
             expect(await ethers.provider.getBalance(proxy.address)).to.equal(BigNumber.from("5000000000000000000"));
-            console.log('hii3')
             await callableProxy.incrementWindow();
-            console.log('hi4')
-            const balanceWindowAfter = await callableProxy.balanceForWindow(0);
-            console.log(balanceWindowAfter);
-            // const balanceWindowAfter1 = await callableProxy.balanceForWindow(1);
-            // console.log(balanceWindowAfter1);
+            expect(await callableProxy.balanceForWindow(0)).to.equal(BigNumber.from("5000000000000000000"));
         })
 
-        // it("Should send held balance from u0 to the last splits contract.", async function() {
-        //     // TODO
-        // })
+        it("Should let creator1 claim from the last splits contract.", async function() {
+            const account = claimers[2];  
+            const allocation = BigNumber.from(allocationPercentages[2] * 10**8);
+            const proof = tree.getProof(account, allocation);
+
+            const accountBalanceBefore = await ethers.provider.getBalance(account);
+            const splitterBalanceBefore = await ethers.provider.getBalance(callableProxy.address);
+            expect(splitterBalanceBefore).to.equal(BigNumber.from("5000000000000000000"));
+
+            const claimTx = await callableProxy.connect(signingAccounts[1]).claim(0, account, allocation, proof);
+            // const claimTx = await callableProxy.claim(0, account, allocation, proof);
+            const accountBalanceAfter = await ethers.provider.getBalance(account);
+            const splitterBalanceAfter = await ethers.provider.getBalance(callableProxy.address);
+            // console.log(accountBalanceBefore.sub(accountBalanceAfter).div(BigNumber.from("100000000000000")).toNumber());
+            // console.log(splitterBalanceAfter.sub(splitterBalanceBefore).div(BigNumber.from("100000000000000")).toNumber());
+            expect(accountBalanceBefore.sub(accountBalanceAfter).div(BigNumber.from("100000000000000")).toNumber())
+                .to.be.closeTo(splitterBalanceAfter.sub(splitterBalanceBefore).div(BigNumber.from("100000000000000")).toNumber(), 10);
+        })
 
     })
 })
