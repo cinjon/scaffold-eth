@@ -29,6 +29,27 @@ import "./IMerkleDistributor.sol";
 // To do this, we need to account for it in the Merkel/Splits distributors. So we need to keep track of the historical 
 // claims as well and be able to ping whether a user has claimed.
 
+// contract UnitCoinStorage {
+//     // Identifyng info.
+//     string public publicUrl;
+//     address public creatorAddress;
+//     string public creatorName;
+//     address public poolAddress;
+//     string[] private _parentIDs;
+//     address[] private _knownParentAddresses;
+//     // address[] private _claimDistributors;  
+//     address private _parentDistributor;  
+
+//     // Standard across units.
+//     uint256 constant maximumParentSize = 5;
+// }
+
+interface UnitCoinV1Interface {
+    function addParents(address[] memory parentAddresses) external ;
+    function getParentIDs() external view returns (string[] memory);
+    function getKnownParentAddresses() external view returns (address[] memory);
+    // function setTokenOnce(address parentMerkleAddress) external;
+}
 
 // This contract corresponds to a single unit. When instantiated, it holds a UnitCoin with this contract as the owner.
 // Args:
@@ -41,7 +62,7 @@ import "./IMerkleDistributor.sol";
 //   parentIDs: the parent string identification information, for posterity to save.
 //   knownParentAddresses: the known ethereum addresses for the parents. 
 //   parentMerkleAddress: the ethereum address of the creator.
-contract UnitCoinV1 is Ownable, ERC20Capped {
+contract UnitCoinV1 is UnitCoinV1Interface, Ownable, ERC20Capped {
     event Distribution(address distributorAddress, uint256 balance);
 
     // Identifyng info.
@@ -83,8 +104,9 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         if (parentMerkleAddress == sciencePool) {
             ERC20._mint(parentMerkleAddress, parentSupply * 10**uint(decimals()));
         } else {
-            require(IMerkleDistributor(parentMerkleAddress).setTokenOnce(address(this)), "Failed to set merkle address.");
-            ERC20._mint(parentMerkleAddress, parentSupply * 10**uint(decimals()));
+            setTokenOnce(parentMerkleAddress);
+            // require(IMerkleDistributor(parentMerkleAddress).setTokenOnce(address(this)), "Failed to set merkle address.");
+            // ERC20._mint(parentMerkleAddress, parentSupply * 10**uint(decimals()));
         }
 
         // Mint to the creator, the pool of which this is a part, and the parentMerkle for parents to claim. That might
@@ -92,6 +114,12 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         // to the actual parents when they come online.
         ERC20._mint(creatorAddress, creatorSupply * 10**uint(decimals()));
         ERC20._mint(poolAddress, poolSupply * 10**uint(decimals()));
+    }
+
+    function setTokenOnce(address parentMerkleAddress) private {
+        uint256 parentSupply = 1000;
+        require(IMerkleDistributor(parentMerkleAddress).setTokenOnce(address(this)), "Failed to set merkle address.");
+        ERC20._mint(parentMerkleAddress, parentSupply * 10**uint(decimals()));
     }
 
     function _checkParents(address[] memory parentAddresses) view private {
@@ -107,7 +135,7 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         }
     }
 
-    function addParents(address[] memory parentAddresses) public onlyOwner {        
+    function addParents(address[] memory parentAddresses) override external onlyOwner {        
         require(_knownParentAddresses.length + parentAddresses.length <= maximumParentSize, 
                 "We are trying to add too many parents.");
         for (uint i=0; i<parentAddresses.length; i++) {
@@ -116,11 +144,11 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
         _checkParents(_knownParentAddresses);
     }
     
-    function getKnownParentAddresses() external view returns (address[] memory) {
+    function getKnownParentAddresses() override external view returns (address[] memory) {
         return _knownParentAddresses;
     }
 
-    function getParentIDs() external view returns (string[] memory) {
+    function getParentIDs() override external view returns (string[] memory) {
         return _parentIDs;
     }
 
@@ -157,7 +185,7 @@ contract UnitCoinV1 is Ownable, ERC20Capped {
 
     function _redirectPayment() private {
         // Eth sent here is passed on to the owning pool.
-        (bool sent, bytes memory data) = poolAddress.call{value: msg.value}("");
+        (bool sent, ) = poolAddress.call{value: msg.value}("");
         require(sent, "Please do not send eth here; give to the splitter of record.");
     }    
 

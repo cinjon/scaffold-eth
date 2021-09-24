@@ -73,6 +73,7 @@ describe("Unit Contracts", function () {
                 args: ["RSF Science", "RFSCI"],
                 log: true
             });
+            console.log(await scienceContract.owner());
             mlcContract = await PoolFactory.deploy("MLCPool", {
                 from: deployer,
                 contract: "PoolCoin",

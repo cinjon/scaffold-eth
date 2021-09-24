@@ -36,13 +36,14 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //
 // Select the network you want to deploy to here:
 //
-const defaultNetwork = "localhost";
+const defaultNetwork = "rinkeby"; // "localhost";
+const infuraID = "3613f6e868aa470fa67a8dcace019517";
 
 function mnemonic() {
   try {
     return fs.readFileSync("./mnemonic.txt").toString().trim();
   } catch (e) {
-    if (defaultNetwork !== "localhost") {
+    if (defaultNetwork.indexOf("localhost") == -1) {
       console.log(
         "☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`."
       );
@@ -51,6 +52,7 @@ function mnemonic() {
   return "";
 }
 
+// deployer account: 0x30b062bbc2864567cbdcb93a53098be4533d2fb5
 
 const config = {
   defaultNetwork,
@@ -69,31 +71,31 @@ const config = {
       */
     },
     rinkeby: {
-      url: "https://rinkeby.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+      url: "https://rinkeby.infura.io/v3/" + infuraID, // <---- YOUR INFURA ID! (or it won't work)
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     kovan: {
-      url: "https://kovan.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+      url: "https://kovan.infura.io/v3/" + infuraID, // <---- YOUR INFURA ID! (or it won't work)
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     mainnet: {
-      url: "https://mainnet.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+      url: "https://mainnet.infura.io/v3/" + infuraID, // <---- YOUR INFURA ID! (or it won't work)
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     ropsten: {
-      url: "https://ropsten.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+      url: "https://ropsten.infura.io/v3/" + infuraID, // <---- YOUR INFURA ID! (or it won't work)
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     goerli: {
-      url: "https://goerli.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+      url: "https://goerli.infura.io/v3/" + infuraID, // <---- YOUR INFURA ID! (or it won't work)
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -245,7 +247,7 @@ const config = {
       default: "0x06D7B826826fc0b8480B002949D7d28b8CAd8242"
     },
     deployer: {
-      default: 0,
+      default: "0x30b062bbc2864567cbdcb93a53098be4533d2fb5"
     },
     allPool: {
       default: 1,
@@ -279,6 +281,18 @@ const config = {
     },
     funder1: {
       default: 11
+    },
+    science: {
+      default: 12
+    },
+    mlc: {
+      default: 13
+    },
+    cinjon: {
+      default: "0xCD2d5Dfa106aad2B9235dBd2D44D62dD9c8f5E63",
+    },
+    adam: {
+      default: "0x95F978fcdcdA9BdF7bdB1Eef42Fc4a4C199828CB"
     }
   },
 };
